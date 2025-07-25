@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Superuser Dashboard - Garage POS{% endblock %}
+{% block page_title %}Superuser Dashboard{% endblock %}
+{% block content %}
+<div class="p-4 sm:p-6 space-y-6">
+    <!-- Stats Grid -->
+    {% with stats=[
+        {'title': 'Total Garages', 'value': '15', 'icon': 'fas fa-warehouse', 'color': 'bg-blue-500'},
+        {'title': 'Active Subscriptions', 'value': '12', 'icon': 'fas fa-dollar-sign', 'color': 'bg-green-500'},
+        {'title': 'Total Admin Users', 'value': '25', 'icon': 'fas fa-users', 'color': 'bg-purple-500'},
+        {'title': 'Monthly Revenue', 'value': '₹50,000', 'icon': 'fas fa-chart-line', 'color': 'bg-orange-500'}
+    ] %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {% for stat in stats %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center">
+                <div class="{{ stat.color }} rounded-lg p-3">
+                    <i class="{{ stat.icon }} w-6 h-6 text-white"></i>
+                </div>
+                <div class="ml-4">
+                    <p class="text-sm font-medium text-gray-600">{{ stat.title }}</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ stat.value }}</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endwith %}
+
+    <!-- Quick Actions -->
+    {% with actions=[
+        {'title': 'Create New Garage', 'icon': 'fas fa-warehouse', 'color': 'bg-blue-600 hover:bg-blue-700', 'url': '{% url "manage_garages" %}'},
+        {'title': 'Add Admin User', 'icon': 'fas fa-user-plus', 'color': 'bg-green-600 hover:bg-green-700', 'url': '{% url "manage_garages" %}'},
+        {'title': 'Manage Subscriptions', 'icon': 'fas fa-dollar-sign', 'color': 'bg-purple-600 hover:bg-purple-700', 'url': '{% url "manage_garages" %}'}
+    ] %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for action in actions %}
+            <a href="{{ action.url }}" class="{{ action.color }} text-white rounded-lg p-4 text-center transition-colors duration-200 group">
+                <i class="{{ action.icon }} w-8 h-8 mx-auto mb-2 group-hover:scale-110 transition-transform duration-200"></i>
+                <span class="text-sm font-medium">{{ action.title }}</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endwith %}
+
+    <!-- Recent Activity -->
+    {% with activities=[
+        {'time': '10:30 AM', 'action': 'New garage "City Garage" created with 1-year subscription', 'type': 'success'},
+        {'time': '10:15 AM', 'action': 'Admin user "john_doe" assigned to "North Garage"', 'type': 'info'},
+        {'time': '9:45 AM', 'action': 'Subscription for "South Garage" upgraded to 2 years', 'type': 'success'},
+        {'time': '9:30 AM', 'action': 'Subscription for "East Garage" cancelled', 'type': 'warning'},
+        {'time': '9:15 AM', 'action': 'New garage ID generated: GAR-1234', 'type': 'info'}
+    ] %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+        <div class="space-y-3">
+            {% for activity in activities %}
+            <div class="flex items-start space-x-3">
+                <div class="w-2 h-2 rounded-full mt-2 {% if activity.type == 'success' %}bg-green-500{% elif activity.type == 'warning' %}bg-yellow-500{% else %}bg-blue-500{% endif %}"></div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm text-gray-900">{{ activity.action }}</p>
+                    <p class="text-xs text-gray-500">{{ activity.time }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endwith %}
+</div>
+{% endblock %}

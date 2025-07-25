@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Garage POS{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        {% if user.is_authenticated %}
+        <!-- Mobile sidebar overlay -->
+        <div id="sidebarOverlay" class="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden hidden" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar (Fixed) -->
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0">
+            <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-car w-8 h-8 text-blue-600"></i>
+                    <span class="text-xl font-bold text-gray-900">Garage POS</span>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times w-6 h-6"></i>
+                </button>
+            </div>
+            <nav class="mt-6 overflow-y-auto h-[calc(100vh-4rem)]">
+                <ul>
+                    {% if user.is_superuser %}
+                        <li>
+                            <a href="{% url 'superuser_dashboard' %}" class="{% if request.path == '/superuser/dashboard/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'add_company_user' %}" class="{% if request.path == '/superuser/add-user/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-user-plus w-5 h-5 mr-3"></i>
+                                Add User
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-file-alt w-5 h-5 mr-3"></i>
+                                Reports
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'superuser_setting' %}" class="{% if request.path == '/superuser/settings/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cog w-5 h-5 mr-3"></i>
+                                Settings
+                            </a>
+                        </li>
+                    {% elif user.role == 'admin' %}
+                        <li>
+                            <a href="{% url 'admin_dashboard' %}" class="{% if request.path == '/admin/dashboard/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'add_vehicle' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-car-side w-5 h-5 mr-3"></i>
+                                Add Vehicle
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'pos_billing' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cash-register w-5 h-5 mr-3"></i>
+                                POS
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'inventory_management' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-boxes w-5 h-5 mr-3"></i>
+                                Inventory
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'staff_management' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-users w-5 h-5 mr-3"></i>
+                                Staff
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'admin_report' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-file-alt w-5 h-5 mr-3"></i>
+                                Reports
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{%url 'admin_setting' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cog w-5 h-5 mr-3"></i>
+                                Settings
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{%url 'admin_upload' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cog w-5 h-5 mr-3"></i>
+                                Uploads
+                            </a>
+                        </li>
+                    {% else %}
+                        <li>
+                            <a href="{% url 'staff_dashboard' %}" class="{% if request.path == '/staff/dashboard/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-shopping-cart w-5 h-5 mr-3"></i>
+                                Manage Orders
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-file-alt w-5 h-5 mr-3"></i>
+                                Reports
+                            </a>
+                        </li>
+                    {% endif %}
+                    <li>
+                        <button onclick="logout()" class="w-full flex items-center px-6 py-3 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200">
+                            <i class="fas fa-lock w-5 h-5 mr-3"></i>
+                            Logout
+                        </button>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <div class="flex-1 flex flex-col">
+            <!-- Header (Fixed) -->
+            <header class="fixed top-0 left-0 right-0 lg:left-64 z-20 bg-white shadow-sm border-b border-gray-200 h-16">
+                <div class="flex items-center justify-between px-4 sm:px-6 h-full">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-bars w-6 h-6"></i>
+                    </button>
+                    <div class="flex items-center space-x-4">
+                        <div class="hidden sm:block">
+                            <h1 class="text-2xl font-semibold text-gray-900">
+                                {% block page_title %}
+                                {% if request.path == '/superuser/dashboard/' %}Superuser Dashboard
+                                {% elif request.path == '/admin/dashboard/' %}Admin Dashboard
+                                {% elif request.path == '/staff/dashboard/' %}Staff Dashboard
+                                {% elif request.path == '/superuser/add-user/' %}Add User
+                                {% else %}Dashboard
+                                {% endif %}
+                                {% endblock %}
+                            </h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- Notification Icon (Dummy) -->
+                        <div class="relative">
+                            <button id="notificationBtn" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-bell w-6 h-6"></i>
+                                <span id="notificationCount" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full hidden">0</span>
+                            </button>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm font-medium text-gray-900">{{ user.username }}</p>
+                            <p class="text-xs text-gray-500">{{ user.company.name|default:"No Company" }}</p>
+                        </div>
+                        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                            <span class="text-white text-sm font-medium">{{ user.username|first|upper }}</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable Content Area -->
+            <main class="flex-1 p-6 mt-16 lg:ml-64 overflow-y-auto">
+                {% block content %}
+                {% endblock %}
+            </main>
+        </div>
+        {% endif %}
+    </div>
+    <script>
+        // Helper function to get CSRF token from cookie
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Toggle sidebar for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+                sidebar.classList.add('translate-x-0');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.remove('translate-x-0');
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // Show Toastify notification
+        function showToast(message, type = 'success') {
+            Toastify({
+                text: message,
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: type === 'success' ? "#4CAF50" : "#F44336",
+                stopOnFocus: true,
+            }).showToast();
+        }
+
+        // Logout function
+        async function logout() {
+            const csrfToken = getCookie('csrftoken');
+            if (!csrfToken) {
+                showToast('CSRF token not found', 'error');
+                return;
+            }
+            try {
+                const response = await fetch('/logout/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    showToast('Logout failed', 'error');
+                }
+            } catch (error) {
+                showToast('Network error occurred', 'error');
+            }
+        }
+
+        // Ensure correct sidebar active state on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const navLinks = document.querySelectorAll('#sidebar a');
+            navLinks.forEach(link => {
+                if (link.getAttribute('href') === window.location.pathname) {
+                    link.classList.add('bg-blue-50', 'text-blue-700', 'border-r-2', 'border-blue-600');
+                } else {
+                    link.classList.remove('bg-blue-50', 'text-blue-700', 'border-r-2', 'border-blue-600');
+                    link.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

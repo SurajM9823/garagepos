@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Staff Dashboard - Garage POS{% endblock %}
+
+{% block content %}
+<div class="bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-4">Staff Dashboard</h2>
+    <p>Welcome, {{ user.username }}!</p>
+    <p class="mt-2">As a staff member, you can view your tasks, update order statuses, and access customer information.</p>
+    <div class="mt-4 space-y-4">
+        <button class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">View Tasks</button>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Update Orders</button>
+        <button class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Customer Info</button>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,629 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports & Analytics - Garage POS{% endblock %}
+
+{% block content %}
+<div class="flex-1 p-3 sm:p-4 space-y-3 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0">
+        <div>
+            <h1 class="text-lg font-bold text-gray-900">Reports & Analytics</h1>
+            <p class="text-xs text-gray-600">Business insights and performance metrics</p>
+        </div>
+        <div class="flex space-x-2">
+            <select id="period-filter" class="border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="today">Today</option>
+                <option value="this-week">This Week</option>
+                <option value="this-month" selected>This Month</option>
+                <option value="last-month">Last Month</option>
+                <option value="this-year">This Year</option>
+                <option value="custom">Custom Range</option>
+            </select>
+            <input type="date" id="custom-start-date" class="hidden border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            <input type="date" id="custom-end-date" class="hidden border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            <button id="export-btn" class="no-print bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                <i class="fas fa-download w-3 h-3"></i>
+                <span>Export</span>
+            </button>
+            <button id="print-btn" class="no-print bg-green-600 hover:bg-green-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                <i class="fas fa-print w-3 h-3"></i>
+                <span>Print</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-3" id="key-metrics"></div>
+
+    <!-- Report Tabs -->
+    <div class="bg-white rounded-md shadow-sm border border-gray-200">
+        <div class="border-b border-gray-200">
+            <nav class="flex space-x-6 px-4">
+                <button id="sales-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-blue-500 text-blue-600">Sales Report</button>
+                <button id="credit-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Credit Report</button>
+                <button id="suppliers-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Suppliers Report</button>
+                <button id="profit-loss-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Profit & Loss</button>
+            </nav>
+        </div>
+        <div class="p-3">
+            <canvas id="report-chart" class="mb-3" height="100"></canvas>
+            <div id="report-content"></div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+        <div class="bg-white rounded-md max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                <h2 class="text-sm font-semibold text-gray-900" id="modal-title">Transaction Details</h2>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="p-4" id="modal-content"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Dummy data (Nepal-specific)
+    const data = {
+        today: {
+            sales: {
+                revenue: 12500,
+                orders: 15,
+                avgOrder: 833,
+                topParts: [
+                    { name: 'Engine Oil 20W-50', quantity: 10, revenue: 4500, transactions: [{ id: 'TX001', customer: 'Ravi Shrestha', vehicle: 'NP01-1234', amount: 450, date: '2025-07-21' }] },
+                    { name: 'Brake Pads - Pulsar', quantity: 5, revenue: 4250, transactions: [{ id: 'TX002', customer: 'Sita Thapa', vehicle: 'NP02-5678', amount: 850, date: '2025-07-21' }] }
+                ]
+            },
+            credit: [
+                { customer: 'Ravi Shrestha', orderId: 'ORD001', amount: 2500, dueDate: '2025-07-25', status: 'Pending', transactions: [{ date: '2025-07-20', amount: 1000, mode: 'Cash' }] },
+                { customer: 'Sita Thapa', orderId: 'ORD002', amount: 1800, dueDate: '2025-07-22', status: 'Overdue', transactions: [] }
+            ],
+            suppliers: [
+                { name: 'Kathmandu Auto Parts', purchase: 15000, parts: 'Engine Oil', date: '2025-07-20', transactions: [{ id: 'PO001', amount: 15000, parts: '20L Engine Oil', date: '2025-07-20' }] }
+            ],
+            profitLoss: { revenue: 12500, expenses: { inventory: 8000, salaries: 0, other: 0 }, vat: 1625, netProfit: 2875 }
+        },
+        'this-week': {
+            sales: {
+                revenue: 62300,
+                orders: 78,
+                avgOrder: 799,
+                topParts: [
+                    { name: 'Engine Oil 20W-50', quantity: 25, revenue: 11250, transactions: [{ id: 'TX003', customer: 'Hari Gurung', vehicle: 'NP03-5678', amount: 450, date: '2025-07-19' }] },
+                    { name: 'Brake Pads - Pulsar', quantity: 20, revenue: 17000, transactions: [{ id: 'TX004', customer: 'Mina Lama', vehicle: 'NP04-9876', amount: 850, date: '2025-07-18' }] }
+                ]
+            },
+            credit: [
+                { customer: 'Ravi Shrestha', orderId: 'ORD001', amount: 2500, dueDate: '2025-07-25', status: 'Pending', transactions: [{ date: '2025-07-20', amount: 1000, mode: 'Cash' }] },
+                { customer: 'Sita Thapa', orderId: 'ORD002', amount: 1800, dueDate: '2025-07-22', status: 'Overdue', transactions: [] },
+                { customer: 'Hari Gurung', orderId: 'ORD003', amount: 3200, dueDate: '2025-07-26', status: 'Pending', transactions: [] }
+            ],
+            suppliers: [
+                { name: 'Kathmandu Auto Parts', purchase: 15000, parts: 'Engine Oil', date: '2025-07-20', transactions: [{ id: 'PO001', amount: 15000, parts: '20L Engine Oil', date: '2025-07-20' }] },
+                { name: 'Pokhara Spares', purchase: 22000, parts: 'Brake Pads', date: '2025-07-18', transactions: [{ id: 'PO002', amount: 22000, parts: '50 Brake Pads', date: '2025-07-18' }] }
+            ],
+            profitLoss: { revenue: 62300, expenses: { inventory: 35000, salaries: 5000, other: 2000 }, vat: 8109, netProfit: 12191 }
+        },
+        'this-month': {
+            sales: {
+                revenue: 185600,
+                orders: 220,
+                avgOrder: 844,
+                topParts: [
+                    { name: 'Engine Oil 20W-50', quantity: 60, revenue: 27000, transactions: [{ id: 'TX005', customer: 'Bikram Rai', vehicle: 'NP05-4321', amount: 450, date: '2025-07-15' }, { id: 'TX006', customer: 'Anita Tamang', vehicle: 'NP06-8765', amount: 450, date: '2025-07-14' }] },
+                    { name: 'Brake Pads - Pulsar', quantity: 45, revenue: 38250, transactions: [{ id: 'TX007', customer: 'Ravi Shrestha', vehicle: 'NP01-1234', amount: 850, date: '2025-07-13' }] },
+                    { name: 'Drive Chain 428H', quantity: 38, revenue: 25840, transactions: [{ id: 'TX008', customer: 'Sita Thapa', vehicle: 'NP02-5678', amount: 680, date: '2025-07-12' }] },
+                    { name: 'Spark Plug NGK', quantity: 120, revenue: 21600, transactions: [{ id: 'TX009', customer: 'Hari Gurung', vehicle: 'NP03-5678', amount: 180, date: '2025-07-11' }] },
+                    { name: 'Air Filter', quantity: 50, revenue: 16000, transactions: [{ id: 'TX010', customer: 'Mina Lama', vehicle: 'NP04-9876', amount: 320, date: '2025-07-10' }] }
+                ]
+            },
+            credit: [
+                { customer: 'Ravi Shrestha', orderId: 'ORD001', amount: 2500, dueDate: '2025-07-25', status: 'Pending', transactions: [{ date: '2025-07-20', amount: 1000, mode: 'Cash' }, { date: '2025-07-15', amount: 500, mode: 'eSewa' }] },
+                { customer: 'Sita Thapa', orderId: 'ORD002', amount: 1800, dueDate: '2025-07-22', status: 'Overdue', transactions: [] },
+                { customer: 'Hari Gurung', orderId: 'ORD003', amount: 3200, dueDate: '2025-07-26', status: 'Pending', transactions: [] },
+                { customer: 'Mina Lama', orderId: 'ORD004', amount: 4500, dueDate: '2025-07-30', status: 'Pending', transactions: [{ date: '2025-07-18', amount: 1500, mode: 'Bank' }] }
+            ],
+            suppliers: [
+                { name: 'Kathmandu Auto Parts', purchase: 45000, parts: 'Engine Oil, Filters', date: '2025-07-10', transactions: [{ id: 'PO003', amount: 45000, parts: '50L Engine Oil, 20 Filters', date: '2025-07-10' }] },
+                { name: 'Pokhara Spares', purchase: 32000, parts: 'Brake Pads, Chains', date: '2025-07-15', transactions: [{ id: 'PO004', amount: 32000, parts: '100 Brake Pads, 50 Chains', date: '2025-07-15' }] },
+                { name: 'Biratnagar Motors', purchase: 28000, parts: 'Spark Plugs', date: '2025-07-12', transactions: [{ id: 'PO005', amount: 28000, parts: '200 Spark Plugs', date: '2025-07-12' }] }
+            ],
+            profitLoss: { revenue: 185600, expenses: { inventory: 100000, salaries: 20000, other: 5000 }, vat: 24128, netProfit: 36472 }
+        },
+        'last-month': {
+            sales: {
+                revenue: 162300,
+                orders: 195,
+                avgOrder: 832,
+                topParts: [
+                    { name: 'Engine Oil 20W-50', quantity: 50, revenue: 22500, transactions: [{ id: 'TX011', customer: 'Sita Thapa', vehicle: 'NP02-5678', amount: 450, date: '2025-06-20' }] },
+                    { name: 'Brake Pads - Pulsar', quantity: 40, revenue: 34000, transactions: [{ id: 'TX012', customer: 'Hari Gurung', vehicle: 'NP03-5678', amount: 850, date: '2025-06-19' }] }
+                ]
+            },
+            credit: [
+                { customer: 'Sita Thapa', orderId: 'ORD002', amount: 1800, dueDate: '2025-06-22', status: 'Overdue', transactions: [] },
+                { customer: 'Hari Gurung', orderId: 'ORD005', amount: 2800, dueDate: '2025-06-30', status: 'Paid', transactions: [{ date: '2025-06-30', amount: 2800, mode: 'Cash' }] }
+            ],
+            suppliers: [
+                { name: 'Kathmandu Auto Parts', purchase: 40000, parts: 'Engine Oil', date: '2025-06-10', transactions: [{ id: 'PO006', amount: 40000, parts: '40L Engine Oil', date: '2025-06-10' }] },
+                { name: 'Pokhara Spares', purchase: 30000, parts: 'Brake Pads', date: '2025-06-15', transactions: [{ id: 'PO007', amount: 30000, parts: '80 Brake Pads', date: '2025-06-15' }] }
+            ],
+            profitLoss: { revenue: 162300, expenses: { inventory: 90000, salaries: 15000, other: 5000 }, vat: 21099, netProfit: 31201 }
+        },
+        'this-year': {
+            sales: {
+                revenue: 1250000,
+                orders: 1500,
+                avgOrder: 833,
+                topParts: [
+                    { name: 'Engine Oil 20W-50', quantity: 400, revenue: 180000, transactions: [{ id: 'TX013', customer: 'Bikram Rai', vehicle: 'NP05-4321', amount: 450, date: '2025-01-10' }] },
+                    { name: 'Brake Pads - Pulsar', quantity: 300, revenue: 255000, transactions: [{ id: 'TX014', customer: 'Anita Tamang', vehicle: 'NP06-8765', amount: 850, date: '2025-03-15' }] }
+                ]
+            },
+            credit: [
+                { customer: 'Ravi Shrestha', orderId: 'ORD001', amount: 2500, dueDate: '2025-07-25', status: 'Pending', transactions: [{ date: '2025-07-20', amount: 1000, mode: 'Cash' }] },
+                { customer: 'Sita Thapa', orderId: 'ORD002', amount: 1800, dueDate: '2025-07-22', status: 'Overdue', transactions: [] },
+                { customer: 'Hari Gurung', orderId: 'ORD003', amount: 3200, dueDate: '2025-07-26', status: 'Pending', transactions: [] },
+                { customer: 'Mina Lama', orderId: 'ORD004', amount: 4500, dueDate: '2025-07-30', status: 'Pending', transactions: [{ date: '2025-07-18', amount: 1500, mode: 'Bank' }] },
+                { customer: 'Bikram Rai', orderId: 'ORD006', amount: 5000, dueDate: '2025-06-15', status: 'Paid', transactions: [{ date: '2025-06-15', amount: 5000, mode: 'eSewa' }] }
+            ],
+            suppliers: [
+                { name: 'Kathmandu Auto Parts', purchase: 250000, parts: 'Engine Oil, Filters', date: '2025-01-10', transactions: [{ id: 'PO008', amount: 250000, parts: '200L Engine Oil, 100 Filters', date: '2025-01-10' }] },
+                { name: 'Pokhara Spares', purchase: 180000, parts: 'Brake Pads, Chains', date: '2025-03-15', transactions: [{ id: 'PO009', amount: 180000, parts: '400 Brake Pads, 200 Chains', date: '2025-03-15' }] },
+                { name: 'Biratnagar Motors', purchase: 150000, parts: 'Spark Plugs, Batteries', date: '2025-05-12', transactions: [{ id: 'PO010', amount: 150000, parts: '500 Spark Plugs, 50 Batteries', date: '2025-05-12' }] }
+            ],
+            profitLoss: { revenue: 1250000, expenses: { inventory: 650000, salaries: 150000, other: 50000 }, vat: 162500, netProfit: 237500 }
+        },
+        custom: { sales: { revenue: 0, orders: 0, avgOrder: 0, topParts: [] }, credit: [], suppliers: [], profitLoss: { revenue: 0, expenses: { inventory: 0, salaries: 0, other: 0 }, vat: 0, netProfit: 0 } }
+    };
+
+    let chartInstance = null;
+
+    // Helper functions
+    function renderKeyMetrics(period) {
+        const metrics = [
+            { title: 'Total Revenue', value: `NPR ${data[period].sales.revenue.toLocaleString()}`, subtitle: `${data[period].sales.orders} orders`, icon: 'fa-dollar-sign', color: 'green' },
+            { title: 'Services Completed', value: data[period].sales.orders, subtitle: `Avg NPR ${data[period].sales.avgOrder.toLocaleString()}`, icon: 'fa-motorcycle', color: 'blue' },
+            { title: 'Outstanding Credit', value: `NPR ${data[period].credit.reduce((sum, c) => c.status !== 'Paid' ? sum + c.amount : sum, 0).toLocaleString()}`, subtitle: `${data[period].credit.length} orders`, icon: 'fa-credit-card', color: 'orange' },
+            { title: 'Supplier Purchases', value: `NPR ${data[period].suppliers.reduce((sum, s) => sum + s.purchase, 0).toLocaleString()}`, subtitle: `${data[period].suppliers.length} orders`, icon: 'fa-truck', color: 'purple' }
+        ];
+        document.getElementById('key-metrics').innerHTML = metrics.map(metric => `
+            <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2">
+                <div class="flex items-center">
+                    <div class="bg-${metric.color}-100 rounded-md p-2">
+                        <i class="fas ${metric.icon} w-4 h-4 text-${metric.color}-600"></i>
+                    </div>
+                    <div class="ml-2">
+                        <p class="text-xs font-medium text-gray-600">${metric.title}</p>
+                        <p class="text-base font-bold text-gray-900">${metric.value}</p>
+                        <p class="text-xs text-gray-500">${metric.subtitle}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function renderChart(tab, period) {
+        const ctx = document.getElementById('report-chart').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+
+        let chartData = {};
+        if (tab === 'sales') {
+            chartData = {
+                labels: data[period].sales.topParts ? data[period].sales.topParts.map(p => p.name) : [],
+                datasets: [{
+                    label: 'Revenue (NPR)',
+                    data: data[period].sales.topParts ? data[period].sales.topParts.map(p => p.revenue) : [],
+                    backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            };
+        } else if (tab === 'credit') {
+            const statuses = ['Pending', 'Overdue', 'Paid'];
+            const counts = statuses.map(status => data[period].credit.filter(c => c.status === status).reduce((sum, c) => sum + c.amount, 0));
+            chartData = {
+                labels: statuses,
+                datasets: [{
+                    label: 'Credit Amount (NPR)',
+                    data: counts,
+                    backgroundColor: ['rgba(255, 206, 86, 0.5)', 'rgba(255, 99, 132, 0.5)', 'rgba(75, 192, 192, 0.5)'],
+                    borderColor: ['rgba(255, 206, 86, 1)', 'rgba(255, 99, 132, 1)', 'rgba(75, 192, 192, 1)'],
+                    borderWidth: 1
+                }]
+            };
+        } else if (tab === 'suppliers') {
+            chartData = {
+                labels: data[period].suppliers.map(s => s.name),
+                datasets: [{
+                    label: 'Purchase Amount (NPR)',
+                    data: data[period].suppliers.map(s => s.purchase),
+                    backgroundColor: 'rgba(153, 102, 255, 0.5)',
+                    borderColor: 'rgba(153, 102, 255, 1)',
+                    borderWidth: 1
+                }]
+            };
+        } else if (tab === 'profit-loss') {
+            chartData = {
+                labels: ['Revenue', 'Expenses', 'VAT', 'Net Profit'],
+                datasets: [{
+                    label: 'Amount (NPR)',
+                    data: [
+                        data[period].profitLoss.revenue,
+                        data[period].profitLoss.expenses.inventory + data[period].profitLoss.expenses.salaries + data[period].profitLoss.expenses.other,
+                        data[period].profitLoss.vat,
+                        data[period].profitLoss.netProfit
+                    ],
+                    backgroundColor: ['rgba(75, 192, 192, 0.5)', 'rgba(255, 99, 132, 0.5)', 'rgba(255, 206, 86, 0.5)', 'rgba(54, 162, 235, 0.5)'],
+                    borderColor: ['rgba(75, 192, 192, 1)', 'rgba(255, 99, 132, 1)', 'rgba(255, 206, 86, 1)', 'rgba(54, 162, 235, 1)'],
+                    borderWidth: 1
+                }]
+            };
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function renderReport(tab, period) {
+        const content = document.getElementById('report-content');
+        if (tab === 'sales') {
+            content.innerHTML = `
+                <h3 class="text-sm font-semibold text-gray-900 mb-2">Sales Report</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Part Name</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Quantity Sold</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Revenue</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data[period].sales.topParts ? data[period].sales.topParts.map(part => `
+                                <tr class="border-b border-gray-100 detail-row" data-type="sales" data-id="${part.name}">
+                                    <td class="px-3 py-1 text-xs font-medium text-gray-900">${part.name}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${part.quantity}</td>
+                                    <td class="px-3 py-1 text-xs font-medium text-gray-900">NPR ${part.revenue.toLocaleString()}</td>
+                                    <td class="px-3 py-1 text-xs text-blue-600 cursor-pointer">View</td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="4" class="px-3 py-1 text-xs text-gray-600">No data available</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (tab === 'credit') {
+            content.innerHTML = `
+                <h3 class="text-sm font-semibold text-gray-900 mb-2">Credit Report</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Customer</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Order ID</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Amount</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Due Date</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Status</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data[period].credit.map(credit => `
+                                <tr class="border-b border-gray-100 detail-row" data-type="credit" data-id="${credit.orderId}">
+                                    <td class="px-3 py-1 text-xs font-medium text-gray-900">${credit.customer}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${credit.orderId}</td>
+                                    <td class="px-3 py-1 text-xs font-medium text-gray-900">NPR ${credit.amount.toLocaleString()}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${credit.dueDate}</td>
+                                    <td class="px-3 py-1 text-xs font-medium ${credit.status === 'Overdue' ? 'text-red-600' : credit.status === 'Paid' ? 'text-green-600' : 'text-yellow-600'}">${credit.status}</td>
+                                    <td class="px-3 py-1 text-xs text-blue-600 cursor-pointer">View</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (tab === 'suppliers') {
+            content.innerHTML = `
+                <h3 class="text-sm font-semibold text-gray-900 mb-2">Suppliers Report</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Supplier</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Purchase Amount</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Parts</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Date</th>
+                                <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data[period].suppliers.map(supplier => `
+                                <tr class="border-b border-gray-100 detail-row" data-type="suppliers" data-id="${supplier.name}">
+                                    <td class="px-3 py-1 text-xs font-medium text-gray-900">${supplier.name}</td>
+                                    <td class="px-3 py-1 text-xs font-medium text-gray-900">NPR ${supplier.purchase.toLocaleString()}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${supplier.parts}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${supplier.date}</td>
+                                    <td class="px-3 py-1 text-xs text-blue-600 cursor-pointer">View</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else if (tab === 'profit-loss') {
+            content.innerHTML = `
+                <h3 class="text-sm font-semibold text-gray-900 mb-2">Profit & Loss</h3>
+                <div class="bg-gray-50 rounded-md p-2 mb-2">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                            <p class="text-xs font-medium text-gray-700">Total Revenue</p>
+                            <p class="text-xs font-bold text-gray-900">NPR ${data[period].profitLoss.revenue.toLocaleString()}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-gray-700">Total Expenses</p>
+                            <p class="text-xs font-bold text-gray-900">NPR ${(data[period].profitLoss.expenses.inventory + data[period].profitLoss.expenses.salaries + data[period].profitLoss.expenses.other).toLocaleString()}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-gray-700">VAT (13%)</p>
+                            <p class="text-xs font-bold text-gray-900">NPR ${data[period].profitLoss.vat.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
+                        <div>
+                            <p class="text-xs font-medium text-gray-700">Inventory Expenses</p>
+                            <p class="text-xs font-bold text-gray-900">NPR ${data[period].profitLoss.expenses.inventory.toLocaleString()}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-gray-700">Staff Salaries</p>
+                            <p class="text-xs font-bold text-gray-900">NPR ${data[period].profitLoss.expenses.salaries.toLocaleString()}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-gray-700">Other Expenses</p>
+                            <p class="text-xs font-bold text-gray-900">NPR ${data[period].profitLoss.expenses.other.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center mt-2">
+                        <p class="text-xs font-medium text-gray-700">Net Profit</p>
+                        <p class="text-xs font-bold text-blue-600">NPR ${data[period].profitLoss.netProfit.toLocaleString()}</p>
+                    </div>
+                </div>
+            `;
+        }
+        document.querySelectorAll('.detail-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const type = row.dataset.type;
+                const id = row.dataset.id;
+                let item;
+                if (type === 'sales') item = data[period].sales.topParts.find(p => p.name === id);
+                else if (type === 'credit') item = data[period].credit.find(c => c.orderId === id);
+                else if (type === 'suppliers') item = data[period].suppliers.find(s => s.name === id);
+                document.getElementById('modal-title').textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} Details - ${id}`;
+                if (type === 'sales') {
+                    document.getElementById('modal-content').innerHTML = `
+                        <div class="space-y-2">
+                            <p class="text-xs font-medium text-gray-700">Part: ${item.name}</p>
+                            <p class="text-xs font-medium text-gray-700">Total Quantity: ${item.quantity}</p>
+                            <p class="text-xs font-medium text-gray-700">Total Revenue: NPR ${item.revenue.toLocaleString()}</p>
+                            <h4 class="text-xs font-semibold text-gray-900 mt-2">Transactions</h4>
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Transaction ID</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Customer</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Vehicle</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Amount</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${item.transactions.map(t => `
+                                        <tr class="border-b border-gray-100">
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.id}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.customer}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.vehicle}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">NPR ${t.amount.toLocaleString()}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.date}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else if (type === 'credit') {
+                    document.getElementById('modal-content').innerHTML = `
+                        <div class="space-y-2">
+                            <p class="text-xs font-medium text-gray-700">Customer: ${item.customer}</p>
+                            <p class="text-xs font-medium text-gray-700">Order ID: ${item.orderId}</p>
+                            <p class="text-xs font-medium text-gray-700">Amount: NPR ${item.amount.toLocaleString()}</p>
+                            <p class="text-xs font-medium text-gray-700">Due Date: ${item.dueDate}</p>
+                            <p class="text-xs font-medium text-gray-700">Status: ${item.status}</p>
+                            <h4 class="text-xs font-semibold text-gray-900 mt-2">Payment History</h4>
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Date</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Amount</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Mode</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${item.transactions.length ? item.transactions.map(t => `
+                                        <tr class="border-b border-gray-100">
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.date}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">NPR ${t.amount.toLocaleString()}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.mode}</td>
+                                        </tr>
+                                    `).join('') : '<tr><td colspan="3" class="px-3 py-1 text-xs text-gray-600">No payments made</td></tr>'}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else if (type === 'suppliers') {
+                    document.getElementById('modal-content').innerHTML = `
+                        <div class="space-y-2">
+                            <p class="text-xs font-medium text-gray-700">Supplier: ${item.name}</p>
+                            <p class="text-xs font-medium text-gray-700">Total Purchase: NPR ${item.purchase.toLocaleString()}</p>
+                            <p class="text-xs font-medium text-gray-700">Parts: ${item.parts}</p>
+                            <p class="text-xs font-medium text-gray-700">Date: ${item.date}</p>
+                            <h4 class="text-xs font-semibold text-gray-900 mt-2">Purchase Orders</h4>
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Order ID</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Amount</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Parts</th>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${item.transactions.map(t => `
+                                        <tr class="border-b border-gray-100">
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.id}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">NPR ${t.amount.toLocaleString()}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.parts}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${t.date}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }
+                document.getElementById('detail-modal').classList.remove('hidden');
+            });
+        });
+    }
+
+    function exportCSV(tab, period) {
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        let rows = [];
+        if (tab === 'sales') {
+            csvContent += 'Part Name,Quantity Sold,Revenue\n';
+            if (data[period].sales.topParts) {
+                rows = data[period].sales.topParts.map(part => `${part.name},${part.quantity},NPR ${part.revenue}`);
+            }
+        } else if (tab === 'credit') {
+            csvContent += 'Customer,Order ID,Amount,Due Date,Status\n';
+            rows = data[period].credit.map(c => `${c.customer},${c.orderId},NPR ${c.amount},${c.dueDate},${c.status}`);
+        } else if (tab === 'suppliers') {
+            csvContent += 'Supplier,Purchase Amount,Parts,Date\n';
+            rows = data[period].suppliers.map(s => `${s.name},NPR ${s.purchase},${s.parts},${s.date}`);
+        } else if (tab === 'profit-loss') {
+            csvContent += 'Metric,Amount\n';
+            rows = [
+                `Total Revenue,NPR ${data[period].profitLoss.revenue}`,
+                `Inventory Expenses,NPR ${data[period].profitLoss.expenses.inventory}`,
+                `Staff Salaries,NPR ${data[period].profitLoss.expenses.salaries}`,
+                `Other Expenses,NPR ${data[period].profitLoss.expenses.other}`,
+                `VAT (13%),NPR ${data[period].profitLoss.vat}`,
+                `Net Profit,NPR ${data[period].profitLoss.netProfit}`
+            ];
+        }
+        csvContent += rows.join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `${tab}_report_${period}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Event listeners
+    let activeTab = 'sales';
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('border-blue-500', 'text-blue-600');
+                b.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            });
+            btn.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            btn.classList.add('border-blue-500', 'text-blue-600');
+            activeTab = btn.id.replace('-tab', '');
+            renderReport(activeTab, document.getElementById('period-filter').value);
+            renderChart(activeTab, document.getElementById('period-filter').value);
+        });
+    });
+
+    document.getElementById('period-filter').addEventListener('change', (e) => {
+        const period = e.target.value;
+        if (period === 'custom') {
+            document.getElementById('custom-start-date').classList.remove('hidden');
+            document.getElementById('custom-end-date').classList.remove('hidden');
+        } else {
+            document.getElementById('custom-start-date').classList.add('hidden');
+            document.getElementById('custom-end-date').classList.add('hidden');
+            renderKeyMetrics(period);
+            renderReport(activeTab, period);
+            renderChart(activeTab, period);
+        }
+    });
+
+    document.getElementById('custom-start-date').addEventListener('change', updateCustomRange);
+    document.getElementById('custom-end-date').addEventListener('change', updateCustomRange);
+
+    function updateCustomRange() {
+        const startDate = document.getElementById('custom-start-date').value;
+        const endDate = document.getElementById('custom-end-date').value;
+        if (startDate && endDate) {
+            // Placeholder for custom range data filtering
+            // In a real system, this would query the backend for data within the date range
+            renderKeyMetrics('custom');
+            renderReport(activeTab, 'custom');
+            renderChart(activeTab, 'custom');
+        }
+    }
+
+    document.getElementById('export-btn').addEventListener('click', () => {
+        exportCSV(activeTab, document.getElementById('period-filter').value);
+    });
+
+    document.getElementById('print-btn').addEventListener('click', () => {
+        const content = document.getElementById('report-content').innerHTML;
+        const title = activeTab.charAt(0).toUpperCase() + activeTab.slice(1) + ' Report';
+        const periodText = document.getElementById('period-filter').options[document.getElementById('period-filter').selectedIndex].text;
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>${title}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; font-size: 10pt; margin: 20px; }
+                        table { width: 100%; border-collapse: collapse; }
+                        th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+                        .report-title { font-size: 14pt; text-align: center; margin-bottom: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <h1 class="report-title">${title} (${periodText})</h1>
+                    ${content}
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    });
+
+    document.getElementById('close-modal').addEventListener('click', () => {
+        document.getElementById('detail-modal').classList.add('hidden');
+    });
+
+    // Initial render
+    renderKeyMetrics('this-month');
+    renderReport('sales', 'this-month');
+    renderChart('sales', 'this-month');
+</script>
+{% endblock %}

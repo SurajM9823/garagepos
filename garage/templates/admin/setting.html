@@ -1,0 +1,1274 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Settings & Administration - Garage POS{% endblock %}
+
+{% block content %}
+<div class="flex-1 p-3 sm:p-4 space-y-3 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="mb-3">
+        <h1 class="text-lg font-bold text-gray-900">Settings & Administration</h1>
+        <p class="text-xs text-gray-600">Manage system configuration and user permissions</p>
+    </div>
+
+    <!-- Settings Tabs -->
+    <div class="bg-white rounded-md shadow-sm border border-gray-200 mb-3">
+        <div class="border-b border-gray-200">
+            <nav class="flex space-x-6 px-4">
+                <button id="general-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-blue-500 text-blue-600 flex items-center space-x-1">
+                    <i class="fas fa-cog w-3 h-3"></i>
+                    <span>General</span>
+                </button>
+                <button id="financial-year-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center space-x-1">
+                    <i class="fas fa-calendar-alt w-3 h-3"></i>
+                    <span>Financial Year</span>
+                </button>
+                <button id="tax-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center space-x-1">
+                    <i class="fas fa-money-bill w-3 h-3"></i>
+                    <span>Tax Settings</span>
+                </button>
+                <button id="services-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center space-x-1">
+                    <i class="fas fa-wrench w-3 h-3"></i>
+                    <span>Service Types</span>
+                </button>
+                <button id="categories-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center space-x-1">
+                    <i class="fas fa-box w-3 h-3"></i>
+                    <span>Part Categories</span>
+                </button>
+                <button id="users-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center space-x-1">
+                    <i class="fas fa-users w-3 h-3"></i>
+                    <span>User Roles</span>
+                </button>
+                <button id="other-tab" class="tab-btn border-b-2 py-2 px-1 text-xs font-medium border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 flex items-center space-x-1">
+                    <i class="fas fa-ellipsis-h w-3 h-3"></i>
+                    <span>Other</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="space-y-3" id="settings-content"></div>
+
+    <!-- Add/Edit Modal -->
+    <div id="add-edit-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+        <div class="bg-white rounded-md max-w-2xl w-full p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-sm font-semibold text-gray-900" id="modal-title">Add/Edit</h2>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times w-4 h-4"></i>
+                </button>
+            </div>
+            <form id="modal-form" class="space-y-3"></form>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div id="profile-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+        <div class="bg-white rounded-md max-w-2xl w-full p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h2 class="text-sm font-semibold text-gray-900">Edit User Profile</h2>
+                <button id="close-profile-modal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times w-4 h-4"></i>
+                </button>
+            </div>
+            <form id="profile-form" class="space-y-3">
+                <input type="hidden" id="profile-id">
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                    <input type="text" id="profile-name" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="profile-email" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" required />
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                    <select id="profile-role" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                        <option value="admin">Admin</option>
+                        <option value="manager">Manager</option>
+                        <option value="cashier">Cashier</option>
+                        <option value="mechanic">Mechanic</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Password (leave blank to keep unchanged)</label>
+                    <input type="password" id="profile-password" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                </div>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                    <i class="fas fa-save w-3 h-3"></i>
+                    <span>Save Profile</span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        .no-print { display: none; }
+        body { font-size: 10pt; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 4px; }
+        .report-title { font-size: 14pt; text-align: center; margin-bottom: 10px; }
+    }
+</style>
+
+<script>
+    // Initial data from Django context (unchanged except for adding a safeguard)
+    const initialData = {
+        general: {
+            garageName: '{{ client_garage.name|default:"" }}',
+            address: '{{ client_garage.address|default:"" }}',
+            phone: '{{ client_garage.contact|default:"" }}',
+            email: '{{ client_garage.email|default:"" }}',
+            currency: '{{ client_garage.currency|default:"NPR" }}',
+            lowStockThreshold: {{ client_garage.low_stock_threshold|default:5 }},
+            notifications: {{ client_garage.notifications_enabled|yesno:"true,false" }},
+            whatsapp: {{ client_garage.whatsapp_enabled|yesno:"true,false" }},
+            logo: '{{ client_garage.logo.url|default:"" }}'
+        },
+        financialYears: [
+            {% for fy in fiscal_years %}
+            {
+                id: {{ fy.id }},
+                name: '{{ fy.name }}',
+                startDate: '{{ fy.start_date|date:"Y-m-d" }}',
+                endDate: '{{ fy.end_date|date:"Y-m-d" }}',
+                active: {{ fy.status|yesno:"true,false" }}
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        tax: {
+            rate: {{ tax_setting.tax_rate|default:13 }},
+            includeInBill: {{ tax_setting.include_in_bill|yesno:"true,false" }}
+        },
+        serviceTypes: [
+            {% for service in service_types %}
+            {
+                id: {{ service.id }},
+                name: '{{ service.name }}',
+                category: '{{ service.category }}',
+                basePrice: {{ service.base_price }}
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        partCategories: [
+            {% for category in part_categories %}
+            {
+                id: {{ category.id }},
+                name: '{{ category.name }}',
+                description: '{{ category.description|default:"" }}'
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        userRoles: [
+            {% for role in roles %}
+            {
+                id: {{ role.id }},
+                role: '{{ role.name }}',
+                description: '{{ role.description|default:"" }}',
+                permissions: {{ role.permissions|safe }}
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        users: [
+            {% for user in users %}
+            {
+                id: {{ user.id }},
+                name: '{{ user.username }}',
+                email: '{{ user.email }}',
+                role: '{{ user.role }}',
+                password: ''
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        other: {
+            invoicePrefix: '{{ software_info.invoice_prefix|default:"INV-" }}',
+            language: '{{ software_info.language|default:"en" }}',
+            backupFrequency: '{{ software_info.backup_frequency|default:"Weekly" }}'
+        }
+    };
+
+    // Safeguard: Ensure only one fiscal year is active in initialData
+    (function enforceSingleActiveFiscalYear() {
+        let activeFound = false;
+        initialData.financialYears.forEach(fy => {
+            if (fy.active && !activeFound) {
+                activeFound = true;
+            } else {
+                fy.active = false; // Set all others to inactive
+            }
+        });
+    })();
+
+    let activeTab = 'general';
+    let currentPage = { financialYears: 1, services: 1, categories: 1, users: 1 };
+    const itemsPerPage = 5;
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showToast(message, type = 'success') {
+        Toastify({
+            text: message,
+            duration: 3000,
+            close: true,
+            gravity: "top",
+            position: "right",
+            backgroundColor: type === 'success' ? "#4CAF50" : "#F44336",
+            stopOnFocus: true,
+        }).showToast();
+    }
+
+    function renderPagination(section, totalItems) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        return `
+            <div class="flex justify-end space-x-2 mt-3">
+                <button class="pagination-btn ${currentPage[section] === 1 ? 'opacity-50 cursor-not-allowed' : ''} px-2 py-1 text-xs border border-gray-300 rounded-md" data-section="${section}" data-action="prev">Previous</button>
+                <span class="text-xs text-gray-600">Page ${currentPage[section]} of ${totalPages}</span>
+                <button class="pagination-btn ${currentPage[section] === totalPages ? 'opacity-50 cursor-not-allowed' : ''} px-2 py-1 text-xs border border-gray-300 rounded-md" data-section="${section}" data-action="next">Next</button>
+            </div>
+        `;
+    }
+
+    // Move form submission event listeners to top-level scope to prevent multiple attachments
+    document.getElementById('modal-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('modal-id').value;
+        const csrfToken = getCookie('csrftoken');
+        let formData = new FormData();
+        let url;
+        if (activeTab === 'financial-year') {
+            formData.append('id', id);
+            formData.append('name', document.getElementById('modal-name').value);
+            formData.append('start_date', document.getElementById('modal-startDate').value);
+            formData.append('end_date', document.getElementById('modal-endDate').value);
+            formData.append('active', document.getElementById('modal-active').checked);
+            url = '{% url "save_fiscal_year" %}';
+        } else if (activeTab === 'services') {
+            formData.append('id', id);
+            formData.append('name', document.getElementById('modal-name').value);
+            formData.append('category', document.getElementById('modal-category').value);
+            formData.append('base_price', document.getElementById('modal-basePrice').value);
+            url = '{% url "save_service_type" %}';
+        } else if (activeTab === 'categories') {
+            formData.append('id', id);
+            formData.append('name', document.getElementById('modal-name').value);
+            formData.append('description', document.getElementById('modal-description').value);
+            url = '{% url "save_part_category" %}';
+        } else if (activeTab === 'users') {
+            formData.append('id', id);
+            formData.append('role', document.getElementById('modal-role').value);
+            formData.append('description', document.getElementById('modal-description').value);
+            document.querySelectorAll('.permission-checkbox').forEach(cb => {
+                if (cb.checked) formData.append('permissions', cb.nextElementSibling.textContent);
+            });
+            url = '{% url "save_role" %}';
+        } else if (activeTab === 'user') {
+            formData.append('id', id);
+            formData.append('name', document.getElementById('modal-name').value);
+            formData.append('email', document.getElementById('modal-email').value);
+            formData.append('role', document.getElementById('modal-role').value);
+            if (document.getElementById('modal-password').value) {
+                formData.append('password', document.getElementById('modal-password').value);
+            }
+            url = '{% url "save_user" %}';
+        }
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message, 'success');
+                document.getElementById('add-edit-modal').classList.add('hidden');
+                // Update local data
+                if (activeTab === 'financial-year') {
+                    const item = {
+                        id: id ? parseInt(id) : initialData.financialYears.length + 1,
+                        name: formData.get('name'),
+                        startDate: formData.get('start_date'),
+                        endDate: formData.get('end_date'),
+                        active: formData.get('active') === 'true'
+                    };
+                    if (item.active) initialData.financialYears.forEach(fy => fy.active = false);
+                    if (id) {
+                        const index = initialData.financialYears.findIndex(fy => fy.id == id);
+                        initialData.financialYears[index] = item;
+                    } else {
+                        initialData.financialYears.push(item);
+                    }
+                } else if (activeTab === 'services') {
+                    const item = {
+                        id: id ? parseInt(id) : initialData.serviceTypes.length + 1,
+                        name: formData.get('name'),
+                        category: formData.get('category'),
+                        basePrice: parseFloat(formData.get('base_price'))
+                    };
+                    if (id) {
+                        const index = initialData.serviceTypes.findIndex(s => s.id == id);
+                        initialData.serviceTypes[index] = item;
+                    } else {
+                        initialData.serviceTypes.push(item);
+                    }
+                } else if (activeTab === 'categories') {
+                    const item = {
+                        id: id ? parseInt(id) : initialData.partCategories.length + 1,
+                        name: formData.get('name'),
+                        description: formData.get('description')
+                    };
+                    if (id) {
+                        const index = initialData.partCategories.findIndex(c => c.id == id);
+                        initialData.partCategories[index] = item;
+                    } else {
+                        initialData.partCategories.push(item);
+                    }
+                } else if (activeTab === 'users') {
+                    const permissions = [];
+                    formData.getAll('permissions').forEach(p => permissions.push(p));
+                    const item = {
+                        id: id ? parseInt(id) : initialData.userRoles.length + 1,
+                        role: formData.get('role'),
+                        description: formData.get('description'),
+                        permissions
+                    };
+                    if (id) {
+                        const index = initialData.userRoles.findIndex(r => r.id == id);
+                        initialData.userRoles[index] = item;
+                    } else {
+                        initialData.userRoles.push(item);
+                    }
+                } else if (activeTab === 'user') {
+                    const item = {
+                        id: id ? parseInt(id) : initialData.users.length + 1,
+                        name: formData.get('name'),
+                        email: formData.get('email'),
+                        role: formData.get('role'),
+                        password: ''
+                    };
+                    if (id) {
+                        const index = initialData.users.findIndex(u => u.id == id);
+                        initialData.users[index] = item;
+                    } else {
+                        initialData.users.push(item);
+                    }
+                }
+                renderTabContent(activeTab);
+            } else {
+                showToast(result.error, 'error');
+            }
+        } catch (error) {
+            showToast('Network error occurred', 'error');
+        }
+    });
+
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData();
+        formData.append('id', document.getElementById('profile-id').value);
+        formData.append('name', document.getElementById('profile-name').value);
+        formData.append('email', document.getElementById('profile-email').value);
+        formData.append('role', document.getElementById('profile-role').value);
+        if (document.getElementById('profile-password').value) {
+            formData.append('password', document.getElementById('profile-password').value);
+        }
+        const csrfToken = getCookie('csrftoken');
+        try {
+            const response = await fetch('{% url "save_user" %}', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+                body: formData
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message, 'success');
+                document.getElementById('profile-modal').classList.add('hidden');
+                const id = formData.get('id');
+                const item = {
+                    id: id ? parseInt(id) : initialData.users.length + 1,
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    role: formData.get('role'),
+                    password: ''
+                };
+                if (id) {
+                    const index = initialData.users.findIndex(u => u.id == id);
+                    initialData.users[index] = item;
+                } else {
+                    initialData.users.push(item);
+                }
+                renderTabContent('users');
+            } else {
+                showToast(result.error, 'error');
+            }
+        } catch (error) {
+            showToast('Network error occurred', 'error');
+        }
+    });
+
+    document.getElementById('close-modal').addEventListener('click', () => {
+        document.getElementById('add-edit-modal').classList.add('hidden');
+    });
+
+    document.getElementById('close-profile-modal').addEventListener('click', () => {
+        document.getElementById('profile-modal').classList.add('hidden');
+    });
+
+    function renderTabContent(tab) {
+        const content = document.getElementById('settings-content');
+        if (tab === 'general') {
+            content.innerHTML = `
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3">General Settings</h2>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                        <div class="space-y-3">
+                            <h3 class="text-xs font-medium text-gray-900">Business Information</h3>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Garage Name</label>
+                                <input type="text" value="${initialData.general.garageName}" id="general-garage-name" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                                <textarea id="general-address" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3">${initialData.general.address}</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
+                                <input type="tel" value="${initialData.general.phone}" id="general-phone" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" value="${initialData.general.email}" id="general-email" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Logo</label>
+                                <input type="file" id="general-logo" accept="image/*" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                ${initialData.general.logo ? `<img src="${initialData.general.logo}" alt="Garage Logo" class="mt-2 h-16 w-auto" />` : ''}
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <h3 class="text-xs font-medium text-gray-900">System Settings</h3>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Currency</label>
+                                <select id="general-currency" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="NPR" ${initialData.general.currency === 'NPR' ? 'selected' : ''}>NPR (₨)</option>
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Low Stock Alert Threshold</label>
+                                <input type="number" value="${initialData.general.lowStockThreshold}" id="general-low-stock" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="0" />
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="general-notifications" ${initialData.general.notifications ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <label for="general-notifications" class="text-xs text-gray-700">Enable Email Notifications</label>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <input type="checkbox" id="general-whatsapp" ${initialData.general.whatsapp ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                <label for="general-whatsapp" class="text-xs text-gray-700">Enable WhatsApp Integration</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <button id="save-general" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <i class="fas fa-save w-3 h-3"></i>
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (tab === 'financial-year') {
+            const start = (currentPage.financialYears - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedItems = initialData.financialYears.slice(start, end);
+            content.innerHTML = `
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-sm font-semibold text-gray-900">Financial Year</h2>
+                        <button id="add-financial-year" class="no-print bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <i class="fas fa-plus w-3 h-3"></i>
+                            <span>Add Financial Year</span>
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Name</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Start Date</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">End Date</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Active</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${paginatedItems.map(fy => `
+                                    <tr class="border-b border-gray-100">
+                                        <td class="px-3 py-1 text-xs font-medium text-gray-900">${fy.name}</td>
+                                        <td class="px-3 py-1 text-xs text-gray-600">${fy.startDate}</td>
+                                        <td class="px-3 py-1 text-xs text-gray-600">${fy.endDate}</td>
+                                        <td class="px-3 py-1 text-xs text-gray-600">
+                                            <input type="checkbox" ${fy.active ? 'checked' : ''} class="active-toggle rounded border-gray-300 text-blue-600 focus:ring-blue-500" data-id="${fy.id}" />
+                                        </td>
+                                        <td class="px-3 py-1 text-xs">
+                                            <div class="flex space-x-2">
+                                                <button class="edit-btn text-blue-600 hover:text-blue-900" data-id="${fy.id}">
+                                                    <i class="fas fa-edit w-3 h-3"></i>
+                                                </button>
+                                                <button class="delete-btn text-red-600 hover:text-red-900" data-id="${fy.id}">
+                                                    <i class="fas fa-trash w-3 h-3"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    ${renderPagination('financialYears', initialData.financialYears.length)}
+                </div>
+            `;
+        } else if (tab === 'tax') {
+            content.innerHTML = `
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Tax Settings</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Tax Rate (%)</label>
+                            <input type="number" value="${initialData.tax.rate}" id="tax-rate" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" step="0.01" min="0" max="100" />
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" id="tax-include" ${initialData.tax.includeInBill ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            <label for="tax-include" class="text-xs text-gray-700">Include Tax in Bills by Default</label>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <button id="save-tax" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <i class="fas fa-save w-3 h-3"></i>
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (tab === 'services') {
+            const start = (currentPage.services - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedItems = initialData.serviceTypes.slice(start, end);
+            content.innerHTML = `
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-sm font-semibold text-gray-900">Service Types & Charges</h2>
+                        <button id="add-service" class="no-print bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <i class="fas fa-plus w-3 h-3"></i>
+                            <span>Add Service Type</span>
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Service Name</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Category</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Base Price</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${paginatedItems.map(service => `
+                                    <tr class="border-b border-gray-100">
+                                        <td class="px-3 py-1 text-xs font-medium text-gray-900">${service.name}</td>
+                                        <td class="px-3 py-1 text-xs text-gray-600">${service.category}</td>
+                                        <td class="px-3 py-1 text-xs font-medium text-gray-900">${initialData.general.currency} ${service.basePrice.toLocaleString()}</td>
+                                        <td class="px-3 py-1 text-xs">
+                                            <div class="flex space-x-2">
+                                                <button class="edit-btn text-blue-600 hover:text-blue-900" data-id="${service.id}">
+                                                    <i class="fas fa-edit w-3 h-3"></i>
+                                                </button>
+                                                <button class="delete-btn text-red-600 hover:text-red-900" data-id="${service.id}">
+                                                    <i class="fas fa-trash w-3 h-3"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    ${renderPagination('services', initialData.serviceTypes.length)}
+                </div>
+            `;
+        } else if (tab === 'categories') {
+            const start = (currentPage.categories - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedItems = initialData.partCategories.slice(start, end);
+            content.innerHTML = `
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-sm font-semibold text-gray-900">Spare Part Categories</h2>
+                        <button id="add-category" class="no-print bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <i class="fas fa-plus w-3 h-3"></i>
+                            <span>Add Category</span>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        ${paginatedItems.map(category => `
+                            <div class="border border-gray-200 rounded-md p-3">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="text-xs font-medium text-gray-900">${category.name}</h3>
+                                    <div class="flex space-x-2">
+                                        <button class="edit-btn text-blue-600 hover:text-blue-900" data-id="${category.id}">
+                                            <i class="fas fa-edit w-3 h-3"></i>
+                                        </button>
+                                        <button class="delete-btn text-red-600 hover:text-red-900" data-id="${category.id}">
+                                            <i class="fas fa-trash w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-600">${category.description || ''}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${renderPagination('categories', initialData.partCategories.length)}
+                </div>
+            `;
+        } else if (tab === 'users') {
+            const start = (currentPage.users - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedItems = initialData.userRoles.slice(start, end);
+            content.innerHTML = `
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-sm font-semibold text-gray-900">User Roles & Permissions</h2>
+                        <button id="add-role" class="no-print bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <i class="fas fa-plus w-3 h-3"></i>
+                            <span>Add Role</span>
+                        </button>
+                    </div>
+                    <div class="space-y-3">
+                        ${paginatedItems.map(role => `
+                            <div class="border border-gray-200 rounded-md p-3">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h3 class="text-xs font-medium text-gray-900">${role.role}</h3>
+                                        <p class="text-xs text-gray-600">${role.description || ''}</p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button class="edit-btn text-blue-600 hover:text-blue-900" data-id="${role.id}">
+                                            <i class="fas fa-edit w-3 h-3"></i>
+                                        </button>
+                                        <button class="delete-btn text-red-600 hover:text-red-900" data-id="${role.id}">
+                                            <i class="fas fa-trash w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-medium text-gray-700 mb-1">Permissions:</h4>
+                                    <div class="flex flex-wrap gap-1">
+                                        ${role.permissions.map(p => `
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">${p}</span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${renderPagination('users', initialData.userRoles.length)}
+                    <div class="mt-3">
+                        <h2 class="text-sm font-semibold text-gray-900 mb-3">User Management</h2>
+                        <button id="add-user" class="no-print bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1 mb-3">
+                            <i class="fas fa-plus w-3 h-3"></i>
+                            <span>Add User</span>
+                        </button>
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Name</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Email</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Role</th>
+                                    <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${initialData.users.map(user => `
+                                    <tr class="border-b border-gray-100">
+                                        <td class="px-3 py-1 text-xs font-medium text-gray-900">${user.name}</td>
+                                        <td class="px-3 py-1 text-xs text-gray-600">${user.email}</td>
+                                        <td class="px-3 py-1 text-xs text-gray-600">${user.role}</td>
+                                        <td class="px-3 py-1 text-xs">
+                                            <button class="edit-profile-btn text-blue-600 hover:text-blue-900" data-id="${user.id}">
+                                                <i class="fas fa-user-edit w-3 h-3"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3">
+                        <h2 class="text-sm font-semibold text-gray-900 mb-3">Permission Matrix</h2>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left px-3 py-1 text-xs font-medium text-gray-500">Feature</th>
+                                        ${initialData.userRoles.map(role => `<th class="text-center px-3 py-1 text-xs font-medium text-gray-500">${role.role}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${[
+                                        { feature: 'Dashboard Access', permissions: initialData.userRoles.map(r => true) },
+                                        { feature: 'Vehicle Management', permissions: initialData.userRoles.map(r => r.permissions.includes('Vehicle Management') || r.permissions.includes('All Access')) },
+                                        { feature: 'Staff Management', permissions: initialData.userRoles.map(r => r.permissions.includes('Staff Management') || r.permissions.includes('All Access')) },
+                                        { feature: 'Inventory Management', permissions: initialData.userRoles.map(r => r.permissions.includes('Inventory Management') || r.permissions.includes('All Access')) },
+                                        { feature: 'POS Billing', permissions: initialData.userRoles.map(r => r.permissions.includes('POS Billing') || r.permissions.includes('All Access')) },
+                                        { feature: 'Reports', permissions: initialData.userRoles.map(r => r.permissions.includes('Reports') || r.permissions.includes('All Access')) },
+                                        { feature: 'System Settings', permissions: initialData.userRoles.map(r => r.permissions.includes('System Settings') || r.permissions.includes('All Access')) },
+                                        { feature: 'User Management', permissions: initialData.userRoles.map(r => r.permissions.includes('User Management') || r.permissions.includes('All Access')) }
+                                    ].map(p => `
+                                        <tr class="border-b border-gray-100">
+                                            <td class="px-3 py-1 text-xs font-medium text-gray-900">${p.feature}</td>
+                                            ${p.permissions.map((checked, i) => `
+                                                <td class="px-3 py-1 text-center">
+                                                    <input type="checkbox" ${checked ? 'checked' : ''} class="permission-toggle rounded border-gray-300 text-blue-600 focus:ring-blue-500" data-role="${initialData.userRoles[i].id}" data-feature="${p.feature}" />
+                                                </td>
+                                            `).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3 pt-3 border-t border-gray-200">
+                            <button id="save-permissions" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                                <i class="fas fa-save w-3 h-3"></i>
+                                <span>Update Permissions</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (tab === 'other') {
+            content.innerHTML = `
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-3">Other Settings</h2>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Invoice Prefix</label>
+                            <input type="text" value="${initialData.other.invoicePrefix}" id="other-invoice-prefix" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Language</label>
+                            <select id="other-language" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="en" ${initialData.other.language === 'en' ? 'selected' : ''}>English</option>
+                                <option value="ne">Nepali</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Backup Frequency</label>
+                            <select id="other-backup" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="Daily" ${initialData.other.backupFrequency === 'Daily' ? 'selected' : ''}>Daily</option>
+                                <option value="Weekly" ${initialData.other.backupFrequency === 'Weekly' ? 'selected' : ''}>Weekly</option>
+                                <option value="Monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <button id="save-other" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                            <i class="fas fa-save w-3 h-3"></i>
+                            <span>Save Changes</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Attach other event listeners
+        const addFinancialYearBtn = document.getElementById('add-financial-year');
+        if (addFinancialYearBtn) addFinancialYearBtn.addEventListener('click', () => openAddModal('financial-year'));
+        const addServiceBtn = document.getElementById('add-service');
+        if (addServiceBtn) addServiceBtn.addEventListener('click', () => openAddModal('services'));
+        const addCategoryBtn = document.getElementById('add-category');
+        if (addCategoryBtn) addCategoryBtn.addEventListener('click', () => openAddModal('categories'));
+        const addRoleBtn = document.getElementById('add-role');
+        if (addRoleBtn) addRoleBtn.addEventListener('click', () => openAddModal('users'));
+        const addUserBtn = document.getElementById('add-user');
+        if (addUserBtn) addUserBtn.addEventListener('click', () => openAddModal('user'));
+
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.dataset.id;
+                let item;
+                if (tab === 'financial-year') item = initialData.financialYears.find(fy => fy.id == id);
+                else if (tab === 'services') item = initialData.serviceTypes.find(s => s.id == id);
+                else if (tab === 'categories') item = initialData.partCategories.find(c => c.id == id);
+                else if (tab === 'users') item = initialData.userRoles.find(r => r.id == id);
+                document.getElementById('modal-title').textContent = `Edit ${tab.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+                document.getElementById('modal-form').innerHTML = tab === 'financial-year' ? `
+                    <input type="hidden" id="modal-id" value="${id}">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                        <input type="text" id="modal-name" value="${item.name}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                        <input type="date" id="modal-startDate" value="${item.startDate}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                        <input type="date" id="modal-endDate" value="${item.endDate}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="modal-active" ${item.active ? 'checked' : ''} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        <label for="modal-active" class="text-xs text-gray-700">Active</label>
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                        <i class="fas fa-save w-3 h-3"></i>
+                        <span>Save</span>
+                    </button>
+                ` : tab === 'services' ? `
+                    <input type="hidden" id="modal-id" value="${id}">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Service Name</label>
+                        <input type="text" id="modal-name" value="${item.name}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                        <input type="text" id="modal-category" value="${item.category}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Base Price (${initialData.general.currency})</label>
+                        <input type="number" id="modal-basePrice" value="${item.basePrice}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" step="0.01" min="0" />
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                        <i class="fas fa-save w-3 h-3"></i>
+                        <span>Save</span>
+                    </button>
+                ` : tab === 'categories' ? `
+                    <input type="hidden" id="modal-id" value="${id}">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Category Name</label>
+                        <input type="text" id="modal-name" value="${item.name}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="modal-description" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3">${item.description || ''}</textarea>
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                        <i class="fas fa-save w-3 h-3"></i>
+                        <span>Save</span>
+                    </button>
+                ` : `
+                    <input type="hidden" id="modal-id" value="${id}">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Role Name</label>
+                        <input type="text" id="modal-role" value="${item.role}" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="modal-description" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3">${item.description || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Permissions</label>
+                        <div class="flex flex-wrap gap-2">
+                            ${['All Access', 'Vehicle Management', 'Staff Management', 'Inventory Management', 'POS Billing', 'Reports', 'System Settings', 'User Management'].map(p => `
+                                <div class="flex items-center space-x-2">
+                                    <input type="checkbox" id="perm-${p.replace(/\s/g, '-')}" ${item.permissions.includes(p) ? 'checked' : ''} class="permission-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                                    <label for="perm-${p.replace(/\s/g, '-')}" class="text-xs text-gray-700">${p}</label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                        <i class="fas fa-save w-3 h-3"></i>
+                        <span>Save</span>
+                    </button>
+                `;
+                document.getElementById('add-edit-modal').classList.remove('hidden');
+            });
+        });
+
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (!confirm('Are you sure you want to delete this item?')) return;
+                const id = btn.dataset.id;
+                const csrfToken = getCookie('csrftoken');
+                let url;
+                if (tab === 'financial-year') url = '{% url "delete_fiscal_year" %}';
+                else if (tab === 'services') url = '{% url "delete_service_type" %}';
+                else if (tab === 'categories') url = '{% url "delete_part_category" %}';
+                else if (tab === 'users') url = '{% url "delete_role" %}';
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: `id=${id}`
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showToast(result.message, 'success');
+                        if (tab === 'financial-year') initialData.financialYears = initialData.financialYears.filter(fy => fy.id != id);
+                        else if (tab === 'services') initialData.serviceTypes = initialData.serviceTypes.filter(s => s.id != id);
+                        else if (tab === 'categories') initialData.partCategories = initialData.partCategories.filter(c => c.id != id);
+                        else if (tab === 'users') initialData.userRoles = initialData.userRoles.filter(r => r.id != id);
+                        renderTabContent(tab);
+                    } else {
+                        showToast(result.error, 'error');
+                    }
+                } catch (error) {
+                    showToast('Network error occurred', 'error');
+                }
+            });
+        });
+
+        document.querySelectorAll('.pagination-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const section = btn.dataset.section;
+                const action = btn.dataset.action;
+                const totalPages = Math.ceil(initialData[section].length / itemsPerPage);
+                if (action === 'prev' && currentPage[section] > 1) currentPage[section]--;
+                else if (action === 'next' && currentPage[section] < totalPages) currentPage[section]++;
+                renderTabContent(tab);
+            });
+        });
+
+        document.querySelectorAll('.active-toggle').forEach(toggle => {
+            toggle.addEventListener('change', async (e) => {
+                const id = e.target.dataset.id;
+                const checked = e.target.checked;
+                const csrfToken = getCookie('csrftoken');
+                const fiscalYear = initialData.financialYears.find(fy => fy.id == id);
+                if (!fiscalYear) return;
+
+                // Prevent unticking the active fiscal year
+                if (!checked && fiscalYear.active) {
+                    showToast('Cannot deactivate the active fiscal year directly. Activate another fiscal year first.', 'error');
+                    e.target.checked = true; // Revert checkbox
+                    return;
+                }
+
+                const formData = new FormData();
+                formData.append('id', id);
+                formData.append('name', fiscalYear.name);
+                formData.append('start_date', fiscalYear.startDate);
+                formData.append('end_date', fiscalYear.endDate);
+                formData.append('active', checked);
+
+                try {
+                    const response = await fetch('{% url "save_fiscal_year" %}', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showToast(result.message, 'success');
+                        // Update local data: only one fiscal year can be active
+                        initialData.financialYears.forEach(fy => fy.active = false);
+                        fiscalYear.active = checked;
+                        renderTabContent('financial-year');
+                    } else {
+                        showToast(result.error, 'error');
+                        e.target.checked = !checked; // Revert checkbox on error
+                    }
+                } catch (error) {
+                    showToast('Network error occurred', 'error');
+                    e.target.checked = !checked; // Revert checkbox on error
+                }
+            });
+        });
+
+        document.querySelectorAll('.edit-profile-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const user = initialData.users.find(u => u.id == btn.dataset.id);
+                document.getElementById('profile-id').value = user.id;
+                document.getElementById('profile-name').value = user.name;
+                document.getElementById('profile-email').value = user.email;
+                document.getElementById('profile-role').innerHTML = `
+                    <option value="staff" ${user.role === 'staff' ? 'selected' : ''}>Staff</option>
+                    <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>Manager</option>
+                    <option value="cashier" ${user.role === 'cashier' ? 'selected' : ''}>Cashier</option>
+                    <option value="mechanic" ${user.role === 'mechanic' ? 'selected' : ''}>Mechanic</option>
+                `;
+                document.getElementById('profile-password').value = '';
+                document.getElementById('profile-modal').classList.remove('hidden');
+            });
+        });
+
+        document.getElementById('save-general')?.addEventListener('click', async () => {
+            const formData = new FormData();
+            formData.append('garage_name', document.getElementById('general-garage-name').value);
+            formData.append('address', document.getElementById('general-address').value);
+            formData.append('phone', document.getElementById('general-phone').value);
+            formData.append('email', document.getElementById('general-email').value);
+            formData.append('currency', document.getElementById('general-currency').value);
+            formData.append('low_stock_threshold', document.getElementById('general-low-stock').value);
+            formData.append('notifications', document.getElementById('general-notifications').checked);
+            formData.append('whatsapp', document.getElementById('general-whatsapp').checked);
+            const logoInput = document.getElementById('general-logo');
+            if (logoInput.files[0]) formData.append('logo', logoInput.files[0]);
+            const csrfToken = getCookie('csrftoken');
+            try {
+                const response = await fetch('{% url "save_general_settings" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showToast(result.message, 'success');
+                    initialData.general = {
+                        garageName: formData.get('garage_name'),
+                        address: formData.get('address'),
+                        phone: formData.get('phone'),
+                        email: formData.get('email'),
+                        currency: formData.get('currency'),
+                        lowStockThreshold: parseInt(formData.get('low_stock_threshold')),
+                        notifications: formData.get('notifications') === 'true',
+                        whatsapp: formData.get('whatsapp') === 'true',
+                        logo: initialData.general.logo
+                    };
+                    renderTabContent('general');
+                } else {
+                    showToast(result.error, 'error');
+                }
+            } catch (error) {
+                showToast('Network error occurred', 'error');
+            }
+        });
+
+        document.getElementById('save-tax')?.addEventListener('click', async () => {
+            const formData = new FormData();
+            formData.append('tax_rate', document.getElementById('tax-rate').value);
+            formData.append('include_in_bill', document.getElementById('tax-include').checked);
+            const csrfToken = getCookie('csrftoken');
+            try {
+                const response = await fetch('{% url "save_tax_settings" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showToast(result.message, 'success');
+                    initialData.tax = {
+                        rate: parseFloat(formData.get('tax_rate')),
+                        includeInBill: formData.get('include_in_bill') === 'true'
+                    };
+                } else {
+                    showToast(result.error, 'error');
+                }
+            } catch (error) {
+                showToast('Network error occurred', 'error');
+            }
+        });
+
+        document.getElementById('save-other')?.addEventListener('click', async () => {
+            const formData = new FormData();
+            formData.append('invoice_prefix', document.getElementById('other-invoice-prefix').value);
+            formData.append('language', document.getElementById('other-language').value);
+            formData.append('backup_frequency', document.getElementById('other-backup').value);
+            const csrfToken = getCookie('csrftoken');
+            try {
+                const response = await fetch('{% url "save_other_settings" %}', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': csrfToken },
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    showToast(result.message, 'success');
+                    initialData.other = {
+                        invoicePrefix: formData.get('invoice_prefix'),
+                        language: formData.get('language'),
+                        backupFrequency: formData.get('backup_frequency')
+                    };
+                } else {
+                    showToast(result.error, 'error');
+                }
+            } catch (error) {
+                showToast('Network error occurred', 'error');
+            }
+        });
+
+        document.getElementById('save-permissions')?.addEventListener('click', async () => {
+            document.querySelectorAll('.permission-toggle').forEach(async toggle => {
+                const roleId = toggle.dataset.role;
+                const feature = toggle.dataset.feature;
+                const role = initialData.userRoles.find(r => r.id == roleId);
+                const permissions = toggle.checked
+                    ? [...role.permissions, feature].filter((v, i, a) => a.indexOf(v) === i)
+                    : role.permissions.filter(p => p !== feature);
+                const formData = new FormData();
+                formData.append('id', roleId);
+                formData.append('role', role.role);
+                formData.append('description', role.description || '');
+                permissions.forEach(p => formData.append('permissions', p));
+                const csrfToken = getCookie('csrftoken');
+                try {
+                    const response = await fetch('{% url "save_role" %}', {
+                        method: 'POST',
+                        headers: { 'X-CSRFToken': csrfToken },
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (response.ok) {
+                        showToast(result.message, 'success');
+                        role.permissions = permissions;
+                        renderTabContent('users');
+                    } else {
+                        showToast(result.error, 'error');
+                    }
+                } catch (error) {
+                    showToast('Network error occurred', 'error');
+                }
+            });
+        });
+    }
+
+    function openAddModal(tab) {
+        document.getElementById('modal-title').textContent = `Add ${tab.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+        activeTab = tab;
+        document.getElementById('modal-form').innerHTML = tab === 'financial-year' ? `
+            <input type="hidden" id="modal-id" value="">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                <input type="text" id="modal-name" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                <input type="date" id="modal-startDate" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                <input type="date" id="modal-endDate" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="modal-active" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <label for="modal-active" class="text-xs text-gray-700">Active</label>
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                <i class="fas fa-save w-3 h-3"></i>
+                <span>Save</span>
+            </button>
+        ` : tab === 'services' ? `
+            <input type="hidden" id="modal-id" value="">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Service Name</label>
+                <input type="text" id="modal-name" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                <input type="text" id="modal-category" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Base Price (${initialData.general.currency})</label>
+                <input type="number" id="modal-basePrice" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" step="0.01" min="0" />
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                <i class="fas fa-save w-3 h-3"></i>
+                <span>Save</span>
+            </button>
+        ` : tab === 'categories' ? `
+            <input type="hidden" id="modal-id" value="">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Category Name</label>
+                <input type="text" id="modal-name" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="modal-description" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3"></textarea>
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                <i class="fas fa-save w-3 h-3"></i>
+                <span>Save</span>
+            </button>
+        ` : tab === 'users' ? `
+            <input type="hidden" id="modal-id" value="">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Role Name</label>
+                <input type="text" id="modal-role" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="modal-description" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Permissions</label>
+                <div class="flex flex-wrap gap-2">
+                    ${['All Access', 'Vehicle Management', 'Staff Management', 'Inventory Management', 'POS Billing', 'Reports', 'System Settings', 'User Management'].map(p => `
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" id="perm-${p.replace(/\s/g, '-')}" class="permission-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            <label for="perm-${p.replace(/\s/g, '-')}" class="text-xs text-gray-700">${p}</label>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                <i class="fas fa-save w-3 h-3"></i>
+                <span>Save</span>
+            </button>
+        ` : `
+            <input type="hidden" id="modal-id" value="">
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Name</label>
+                <input type="text" id="modal-name" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                <input type="email" id="modal-email" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                <select id="modal-role" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="staff">Staff</option>
+                    <option value="manager">Manager</option>
+                    <option value="cashier">Cashier</option>
+                    <option value="mechanic">Mechanic</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="modal-password" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+            </div>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                <i class="fas fa-save w-3 h-3"></i>
+                <span>Save</span>
+            </button>
+        `;
+        document.getElementById('add-edit-modal').classList.remove('hidden');
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('border-blue-500', 'text-blue-600');
+                b.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            });
+            btn.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            btn.classList.add('border-blue-500', 'text-blue-600');
+            activeTab = btn.id.replace('-tab', '');
+            renderTabContent(activeTab);
+        });
+    });
+
+    // Initial render
+    renderTabContent('general');
+</script>
+{% endblock %}

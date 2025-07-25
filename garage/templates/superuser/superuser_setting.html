@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+{% block title %}Superuser Settings - Garage POS{% endblock %}
+{% block page_title %}Superuser Settings{% endblock %}
+{% block content %}
+<style>
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .tab {
+        display: none;
+    }
+    .tab.active {
+        display: block;
+    }
+    .tab-button {
+        cursor: pointer;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .tab-button.active {
+        border-bottom: 2px solid #4f46e5;
+        color: #4f46e5;
+        font-weight: 600;
+    }
+    .tab-button:hover {
+        color: #4f46e5;
+    }
+    .password-toggle {
+        cursor: pointer;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    .logo-preview {
+        max-width: 150px;
+        max-height: 150px;
+        object-fit: contain;
+        margin-top: 10px;
+    }
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+    }
+    .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 20px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider {
+        background-color: #4CAF50;
+    }
+    input:checked + .slider:before {
+        transform: translateX(20px);
+    }
+</style>
+
+<!-- Include DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+<!-- Include jQuery and DataTables JS -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<!-- Main Content Container -->
+<div class="p-4 sm:p-5 space-y-4">
+    <!-- Header Section -->
+    <div class="mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">Superuser Settings</h1>
+        <p class="text-gray-600 text-sm">Manage financial year, password, and software information</p>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <div class="border-b border-gray-200">
+        <nav class="flex space-x-2" aria-label="Tabs">
+            <button class="tab-button active" data-tab="financial-year">Financial Year</button>
+            <button class="tab-button" data-tab="change-password">Change Password</button>
+            <button class="tab-button" data-tab="software-info">Software Info</button>
+        </nav>
+    </div>
+
+    <!-- Tabs Content -->
+    <div class="stat-card bg-white p-5 rounded-lg shadow-sm">
+        <!-- Financial Year Tab -->
+        <div id="financial-year" class="tab active">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Set Financial Year</h2>
+            <form method="post" action="{% url 'save_financial_year' %}">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Financial Year Name <i class="fas fa-calendar ml-1 text-gray-500"></i></label>
+                        <input type="text" name="fy_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="e.g., 2081/2082">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Type <i class="fas fa-list ml-1 text-gray-500"></i></label>
+                        <select name="fy_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                            <option value="fiscal">Fiscal</option>
+                            <option value="calendar">Calendar</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Start Date <i class="fas fa-calendar-alt ml-1 text-gray-500"></i></label>
+                        <input type="date" name="fy_start_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">End Date <i class="fas fa-calendar-alt ml-1 text-gray-500"></i></label>
+                        <input type="date" name="fy_end_date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <button type="submit" class="w-full bg-indigo-600 text-white py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm"><i class="fas fa-save mr-2"></i>Save Financial Year</button>
+                    </div>
+                </div>
+            </form>
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Financial Years</h2>
+            <table id="financialYearTable" class="display" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fy in financial_years %}
+                    <tr>
+                        <td>{{ fy.name }}</td>
+                        <td>{{ fy.get_type_display }}</td>
+                        <td>{{ fy.start_date|date:"Y-m-d" }}</td>
+                        <td>{{ fy.end_date|date:"Y-m-d" }}</td>
+                        <td>{{ fy.get_status_display }}</td>
+                        <td>
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="toggle-status" data-fy-id="{{ fy.id }}" {% if fy.status == 'active' %}checked{% endif %}>
+                                <span class="slider"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Change Password Tab -->
+        <div id="change-password" class="tab">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Change Password</h2>
+            <form method="post" action="{% url 'change_password' %}">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Current Password (Stored) <i class="fas fa-lock ml-1 text-gray-500"></i></label>
+                        <div class="relative">
+                            <input type="password" id="current_password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" value="{{ user.plaintext_password|default_if_none:'Not set' }}" readonly>
+                            <i class="fas fa-eye password-toggle" id="toggle_current_password"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">New Password <i class="fas fa-lock ml-1 text-gray-500"></i></label>
+                        <div class="relative">
+                            <input type="password" name="new_password" id="new_password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter new password">
+                            <i class="fas fa-eye password-toggle" id="toggle_new_password"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Confirm New Password <i class="fas fa-lock ml-1 text-gray-500"></i></label>
+                        <div class="relative">
+                            <input type="password" name="confirm_password" id="confirm_password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Confirm new password">
+                            <i class="fas fa-eye password-toggle" id="toggle_confirm_password"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" class="w-full bg-indigo-600 text-white py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm"><i class="fas fa-key mr-2"></i>Change Password</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Software Info Tab -->
+        <div id="software-info" class="tab">
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Software Information</h2>
+            <form method="post" action="{% url 'update_software_info' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Software Name <i class="fas fa-building ml-1 text-gray-500"></i></label>
+                        <input type="text" name="software_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter software name" value="{{ software_info.name|default_if_none:'' }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Logo <i class="fas fa-image ml-1 text-gray-500"></i></label>
+                        <input type="file" name="software_logo" accept="image/*" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" id="software_logo">
+                        {% if software_info.logo %}
+                        <img src="{{ software_info.logo.url }}" alt="Software Logo" class="logo-preview">
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email <i class="fas fa-envelope ml-1 text-gray-500"></i></label>
+                        <input type="email" name="software_email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter email" value="{{ software_info.email|default_if_none:'' }}">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Phone <i class="fas fa-phone ml-1 text-gray-500"></i></label>
+                        <input type="text" name="software_phone" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter phone number" value="{{ software_info.phone|default_if_none:'' }}">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Address <i class="fas fa-map-marker-alt ml-1 text-gray-500"></i></label>
+                        <textarea name="software_address" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter address">{{ software_info.address|default_if_none:'' }}</textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Description <i class="fas fa-file-alt ml-1 text-gray-500"></i></label>
+                        <textarea name="software_description" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter description">{{ software_info.description|default_if_none:'' }}</textarea>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <button type="submit" class="w-full bg-indigo-600 text-white py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm"><i class="fas fa-save mr-2"></i>Update Software Info</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DataTable
+        $('#financialYearTable').DataTable({
+            "paging": true,
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+            "columnDefs": [
+                { "orderable": false, "targets": 5 } // Disable sorting on Action column
+            ]
+        });
+
+        // Tab handling
+        const tabs = document.querySelectorAll('.tab');
+        const tabButtons = document.querySelectorAll('.tab-button');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabs.forEach(tab => tab.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(button.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Password toggle functionality
+        const toggleButtons = document.querySelectorAll('.password-toggle');
+        toggleButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const input = button.previousElementSibling;
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+                button.classList.toggle('fa-eye', isPassword);
+                button.classList.toggle('fa-eye-slash', !isPassword);
+            });
+        });
+
+        // Logo preview
+        const logoInput = document.getElementById('software_logo');
+        logoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.createElement('img');
+                    preview.src = e.target.result;
+                    preview.className = 'logo-preview';
+                    const existingPreview = logoInput.parentElement.querySelector('.logo-preview');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    logoInput.parentElement.appendChild(preview);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Toggle financial year status
+        document.querySelectorAll('.toggle-status').forEach(toggle => {
+            toggle.addEventListener('change', function() {
+                const fyId = this.dataset.fyId;
+                const formData = new FormData();
+                formData.append('fy_id', fyId);
+                formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+                fetch('{% url "toggle_financial_year_status" %}', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        showToast(data.message, 'success');
+                        // Refresh DataTable
+                        window.location.reload();
+                    } else {
+                        showToast(data.error || 'Failed to update status', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast('Network error occurred', 'error');
+                });
+            });
+        });
+
+        // Display Django messages using Toastify
+        {% for message in messages %}
+            Toastify({
+                text: "{{ message }}",
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "{{ message.tags }}" === "success" ? "#4CAF50" : "#F44336",
+                stopOnFocus: true,
+            }).showToast();
+        {% endfor %}
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}

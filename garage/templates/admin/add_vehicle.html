@@ -1,0 +1,1112 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Vehicle & Service - Garage POS{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>Add Vehicle & Service - Garage POS</title>
+</head>
+<body class="bg-gray-100">
+    <div class="p-3 sm:p-4 space-y-3 max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0">
+            <div>
+                <p class="text-xs text-gray-600">Add new vehicle, assign staff, and create service order</p>
+            </div>
+        </div>
+
+        <!-- Add Vehicle Form -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+            <form id="add-vehicle-form" class="space-y-3">
+                {% csrf_token %}
+                <!-- Row 1: Customer Details -->
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-user w-4 h-4 text-blue-600"></i>
+                        <h3 class="text-sm font-medium text-gray-900">Customer Details</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Search Customer</label>
+                            <input
+                                type="text"
+                                id="customer-search"
+                                placeholder="Enter name or phone (or leave blank)"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <div id="customer-results" class="mt-1 space-y-1 hidden"></div>
+                            <p id="no-customer-found" class="text-xs text-gray-600 mt-1 hidden">No customer found. Enter details manually below.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Customer Name</label>
+                            <input
+                                type="text"
+                                name="customerName"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter customer name (optional)"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="+977 XXXXX XXXXX (optional)"
+                            />
+                        </div>
+                    </div>
+                    <div id="visit-history" class="hidden bg-gray-50 rounded-md p-2 text-xs">
+                        <h4 class="font-medium text-gray-900 mb-1">Visit History</h4>
+                        <div id="history-list"></div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Vehicle Details -->
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-motorcycle w-4 h-4 text-green-600"></i>
+                        <h3 class="text-sm font-medium text-gray-900">Vehicle Details</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Number *</label>
+                            <input
+                                type="text"
+                                id="vehicleNumber"
+                                name="vehicleNumber"
+                                required
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="BA-2-PA-XXXX"
+                            />
+                            <div id="vehicle-results" class="mt-1 space-y-1 hidden"></div>
+                            <p id="no-vehicle-found" class="text-xs text-gray-600 mt-1 hidden">No vehicle found. Enter details manually.</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Company *</label>
+                            <select
+                                name="company"
+                                required
+                                id="vehicle-company"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1テキスト
+                                text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">Select company</option>
+                                {% for company in companies %}
+                                    <option value="{{ company.id }}">{{ company.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Model *</label>
+                            <select
+                                name="vehicleModel"
+                                id="vehicle-model"
+                                required
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">Select model</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Type</label>
+                            <select
+                                name="vehicleType"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="">Select type</option>
+                                {% for type in vehicle_types %}
+                                    <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Estimated Time</label>
+                            <select
+                                name="estimatedTime"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                                <option value="1">1 Hour</option>
+                                <option value="2">2 Hours</option>
+                                <option value="4">4 Hours</option>
+                                <option value="8">8 Hours</option>
+                                <option value="24">24+ Hours</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Service & Assignment -->
+                <div class="space-y-2">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-wrench w-4 h-4 text-gray-600"></i>
+                        <h3 class="text-sm font-medium text-gray-900">Service & Assignment</h3>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div class="space-y-2">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Complaint/Issue *</label>
+                                <textarea
+                                    name="complaint"
+                                    required
+                                    class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    rows="3"
+                                    placeholder="Describe the problem..."
+                                ></textarea>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {% for service in service_types %}
+                                    <label class="flex items-center space-x-1 text-xs">
+                                        <input type="checkbox" name="commonService" value="{{ service.name }}" data-price="{{ service.base_price }}" class="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"/>
+                                        <span class="truncate">{{ service.name }} (NPR {{ service.base_price }})</span>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                            <div class="flex space-x-2">
+                                <label class="flex items-center space-x-2 text-xs">
+                                    <input type="checkbox" name="helmetGiven" class="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"/>
+                                    <span>Helmet Given</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs">
+                                    <input type="checkbox" name="keyGiven" class="h-3 w-3 text-blue-600 border-gray-30025
+                                    rounded focus:ring-blue-500"/>
+                                    <span>Key Given</span>
+                                </label>
+                                <label class="flex items-center space-x-2 text-xs">
+                                    <input type="checkbox" name="priority" value="urgent" class="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"/>
+                                    <span>Urgent (default: Normal)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Assign Mechanics</label>
+                            <div id="staff-list" class="space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex space-x-2">
+                    <button type="button" id="reset-form-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Reset
+                    </button>
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-2">
+                        <i class="fas fa-plus w-4 h-4"></i>
+                        <span>Add Vehicle & Create Order</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Global Search and Filter -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2">
+            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                <div class="flex-1 relative">
+                    <i class="fas fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"></i>
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Search by vehicle number, customer name..."
+                        class="w-full pl-8 pr-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                </div>
+                <select id="status-filter" class="border border-gray-300 rounded-md p-1 text-xs focus:ring-blue-500 focus:border-blue-500">
+                    <option value="all">All Orders</option>
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="waiting-assignment">Waiting Assignment</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Vehicle/Service Orders List -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-gray-900">Service Orders</h2>
+            </div>
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-200 mb-3">
+                <button id="pending-ongoing-tab" class="px-4 py-2 text-xs font-medium text-blue-600 border-b-2 border-blue-600">Pending & Ongoing Orders</button>
+                <button id="completed-tab" class="px-4 py-2 text-xs font-medium text-gray-600 hover:text-blue-600 hover:border-b-2 hover:border-blue-600">Completed Orders</button>
+            </div>
+            <div class="space-y-2" id="vehicle-list"></div>
+            <!-- Pagination -->
+            <div class="mt-2 flex justify-between items-center text-xs">
+                <div>
+                    <span id="pagination-info">Showing 1-5 of 10</span>
+                </div>
+                <div class="flex space-x-1">
+                    <button id="prev-page" class="px-1.5 py-0.5 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50" disabled>Previous</button>
+                    <button id="next-page" class="px-1.5 py-0.5 border border-gray-300 rounded-md hover:bg-gray-50">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Order Modal -->
+    <div id="view-order-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-md p-4 max-w-3xl w-full max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-semibold text-gray-900">Service Order Details</h3>
+                <button onclick="document.getElementById('view-order-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times w-4 h-4"></i>
+                </button>
+            </div>
+            <div id="view-order-content" class="text-xs"></div>
+        </div>
+    </div>
+
+    <!-- Assign Mechanic Modal -->
+    <div id="assign-mechanic-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-md p-4 max-w-md w-full">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-semibold text-gray-900">Assign Mechanics</h3>
+                <button onclick="document.getElementById('assign-mechanic-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times w-4 h-4"></i>
+                </button>
+            </div>
+            <form id="assign-form" class="space-y-2">
+                {% csrf_token %}
+                <div id="mechanic-list" class="space-y-1 max-h-64 overflow-y-auto"></div>
+                <div class="flex space-x-2">
+                    <button type="button" onclick="document.getElementById('assign-mechanic-modal').classList.add('hidden')" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium">
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-1.5 px-2 rounded-md text-xs font-medium flex items-center justify-center space-x-2">
+                        <i class="fas fa-users w-4 h-4"></i>
+                        <span>Assign</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // CSRF Token Setup
+        function getCsrfToken() {
+            const tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (tokenElement) {
+                return tokenElement.value;
+            }
+            console.warn('CSRF token not found in DOM. Attempting to get from cookies.');
+            return getCookie('csrftoken');
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-md text-xs text-white z-50`;
+            toast.style.background = type === 'success' ? '#16a34a' : '#dc2626';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // Pagination state
+        let currentPage = 1;
+        const itemsPerPage = 5;
+        let activeTab = 'pending-ongoing';
+
+        async function fetchWithErrorHandling(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+                if (!response.ok) {
+                    const text = await response.text();
+                    console.error(`HTTP error ${response.status}: ${text}`);
+                    throw new Error(`HTTP error ${response.status}: ${text}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Fetch error:', error);
+                throw error;
+            }
+        }
+
+        // Helper functions
+        function getStatusColor(status) {
+            switch (status) {
+                case 'pending': return 'bg-yellow-100 text-yellow-800';
+                case 'in-progress': return 'bg-blue-100 text-blue-800';
+                case 'waiting-assignment': return 'bg-purple-100 text-purple-800';
+                case 'completed': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getPriorityColor(priority) {
+            return priority === 'urgent' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
+        }
+
+        function getStatusIcon(status) {
+            switch (status) {
+                case 'pending': return '<i class="fas fa-clock w-4 h-4 text-yellow-600 mr-2"></i>';
+                case 'in-progress': return '<i class="fas fa-wrench w-4 h-4 text-blue-600 mr-2"></i>';
+                case 'waiting-assignment': return '<i class="fas fa-user w-4 h-4 text-purple-600 mr-2"></i>';
+                case 'completed': return '<i class="fas fa-check-circle w-4 h-4 text-green-600 mr-2"></i>';
+                default: return '<i class="fas fa-file w-4 h-4 text-gray-600 mr-2"></i>';
+            }
+        }
+
+        // Tab switching logic
+        document.getElementById('pending-ongoing-tab').addEventListener('click', () => {
+            activeTab = 'pending-ongoing';
+            document.getElementById('pending-ongoing-tab').classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('completed-tab').classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('completed-tab').classList.add('text-gray-600');
+            currentPage = 1;
+            renderVehicleList();
+        });
+
+        document.getElementById('completed-tab').addEventListener('click', () => {
+            activeTab = 'completed';
+            document.getElementById('completed-tab').classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('pending-ongoing-tab').classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+            document.getElementById('pending-ongoing-tab').classList.add('text-gray-600');
+            currentPage = 1;
+            renderVehicleList();
+        });
+
+        async function renderVehicleList(page = 1) {
+    const searchTerm = document.getElementById('search-input').value;
+    const statusFilter = document.getElementById('status-filter').value;
+    const effectiveStatus = activeTab === 'pending-ongoing' ? 'pending,in-progress,waiting-assignment' : 'completed';
+    const vehicleList = document.getElementById('vehicle-list');
+    vehicleList.innerHTML = '';
+
+    try {
+        const [orderData, staffData] = await Promise.all([
+            fetchWithErrorHandling(`/admin/get-service-orders/?page=${page}&q=${encodeURIComponent(searchTerm)}&status=${statusFilter === 'all' ? effectiveStatus : statusFilter}`),
+            fetchWithErrorHandling('/admin/staff-list/')
+        ]);
+
+        if (orderData.status === 'error') {
+            vehicleList.innerHTML = `<p class="text-xs text-red-600">${orderData.message}</p>`;
+            document.getElementById('pagination-info').textContent = 'Showing 0 of 0';
+            document.getElementById('prev-page').disabled = true;
+            document.getElementById('next-page').disabled = true;
+            showToast(orderData.message, 'error');
+            return;
+        }
+
+        // Create a map of mechanic IDs to usernames
+        const mechanicMap = {};
+        if (staffData.mechanics) {
+            staffData.mechanics.forEach(mechanic => {
+                mechanicMap[mechanic.id] = mechanic.username;
+            });
+        }
+
+        for (const order of orderData.orders) {
+            const services = order.serviceType || [];
+            const totalPrice = services.reduce((sum, s) => sum + (s.price || 0), 0);
+            const billId = order.billId;
+            // Map mechanic IDs to usernames for display
+            const mechanicNames = order.mechanics.map(id => mechanicMap[id] || 'Unknown').join(', ') || 'None';
+
+            const vehicleCard = `
+                <div class="border border-gray-200 rounded-md p-3 hover:shadow-md transition-shadow duration-200 mb-4 bg-white">
+                    <!-- Horizontal Key Info -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" class="order-checkbox h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" data-id="${order.id}"/>
+                            ${getStatusIcon(order.status)}
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900">${order.orderNo}</h3>
+                                <p class="text-xs text-gray-600">${order.vehicleNumber}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-user w-4 h-4 text-gray-400"></i>
+                            <span class="text-xs text-gray-900 truncate">${order.customerName || 'Anonymous'}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-wrench w-4 h-4 text-gray-400"></i>
+                            <span class="text-xs text-gray-900 truncate">${mechanicNames}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-calendar-alt w-4 h-4 text-gray-400"></i>
+                            <span class="text-xs text-gray-500">Created: ${order.createdDate}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-hourglass-end w-4 h-4 text-gray-400"></i>
+                            <span class="text-xs text-gray-500">ETA: ${order.estimatedCompletion}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}">
+                                ${order.status.replace('-', ' ').toUpperCase()}
+                            </span>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(order.priority)}">
+                                ${order.priority.toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                    <!-- Complaint -->
+                    <div class="mb-3">
+                        <p class="text-xs text-gray-700 bg-gray-50 p-2 rounded-md">${order.complaint}</p>
+                    </div>
+                    <!-- Services Table -->
+                    <div class="mb-3">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <i class="fas fa-cogs w-4 h-4 text-gray-400"></i>
+                            <span class="text-xs text-gray-900 font-medium">Services (${services.length})</span>
+                        </div>
+                        ${services.length > 0 ? `
+                            <table class="w-full text-xs text-gray-700 border border-gray-200 rounded-md">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-3 py-1.5 text-left font-medium">Service</th>
+                                        <th class="px-3 py-1.5 text-right font-medium">Price (NPR)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${services.map(s => `
+                                        <tr class="border-t">
+                                            <td class="px-3 py-1.5">${s.name || 'Unknown'}</td>
+                                            <td class="px-3 py-1.5 text-right">${(s.price || 0).toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr class="border-t font-medium">
+                                        <td class="px-3 py-1.5">Total</td>
+                                        <td class="px-3 py-1.5 text-right">NPR ${totalPrice.toFixed(2)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        ` : `
+                            <p class="text-xs text-gray-600">No services selected</p>
+                        `}
+                    </div>
+                    <!-- Progress Bar -->
+                    ${order.status === 'in-progress' ? `
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-medium text-gray-700">Progress</span>
+                                <span class="text-xs text-gray-600">${order.progress}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                <div class="bg-blue-600 h-1.5 rounded-full" style="width: ${order.progress}%"></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    <!-- Action Buttons -->
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        ${order.status !== 'completed' ? `
+                            <button class="edit-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-2" data-id="${order.id}">
+                                <i class="fas fa-edit w-4 h-4"></i>
+                                <span>Edit</span>
+                            </button>
+                            <button class="assign-btn flex-1 bg-purple-600 hover:bg-purple-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-2" data-id="${order.id}">
+                                <i class="fas fa-users w-4 h-4"></i>
+                                <span>Manage Mechanics</span>
+                            </button>
+                        ` : ''}
+                        <button class="view-btn flex-1 bg-gray-600 hover:bg-gray-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-2" data-id="${order.id}">
+                            <i class="fas fa-eye w-4 h-4"></i>
+                            <span>View</span>
+                        </button>
+                        ${order.status !== 'completed' && billId ? `
+                            <a href="/admin/pos-billing/?bill_id=${billId}&orderNo=${order.orderNo}&services=${encodeURIComponent(JSON.stringify(services))}&total=${totalPrice}&customer=${encodeURIComponent(order.customerName || 'Anonymous')}&vehicle=${encodeURIComponent(order.vehicleNumber)}" 
+                               class="pos-btn flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-2">
+                                <i class="fas fa-cash-register w-4 h-4"></i>
+                                <span>Go to POS</span>
+                            </a>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            vehicleList.insertAdjacentHTML('beforeend', vehicleCard);
+        }
+
+        // Update pagination info
+        document.getElementById('pagination-info').textContent = `Showing ${orderData.page * orderData.itemsPerPage - orderData.itemsPerPage + 1}-${Math.min(orderData.page * orderData.itemsPerPage, orderData.total)} of ${orderData.total}`;
+        document.getElementById('prev-page').disabled = orderData.page === 1;
+        document.getElementById('next-page').disabled = orderData.page * orderData.itemsPerPage >= orderData.total;
+
+        // Add event listeners for buttons
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const orderId = btn.dataset.id;
+                try {
+                    const data = await fetchWithErrorHandling(`/admin/get-service-order/?order_id=${orderId}`);
+                    if (data.status === 'success') {
+                        populateEditForm(data.order);
+                        showToast(`Loaded order ${data.order.orderNo} for editing`, 'success');
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                } catch (error) {
+                    showToast('Error loading order details', 'error');
+                }
+            });
+        });
+
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const orderId = btn.dataset.id;
+                try {
+                    const data = await fetchWithErrorHandling(`/admin/get-service-order/?order_id=${orderId}`);
+                    if (data.status === 'success') {
+                        showViewModal(data.order);
+                        showToast(`Viewing order ${data.order.orderNo}`, 'success');
+                    } else {
+                        showToast(data.message, 'error');
+                    }
+                } catch (error) {
+                    showToast('Error loading order details', 'error');
+                }
+            });
+        });
+
+        document.querySelectorAll('.assign-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const orderId = btn.dataset.id;
+                try {
+                    const [orderData, staffData] = await Promise.all([
+                        fetchWithErrorHandling(`/admin/get-service-order/?order_id=${orderId}`),
+                        fetchWithErrorHandling('/admin/staff-list/')
+                    ]);
+                    if (orderData.status === 'success' && staffData.mechanics) {
+                        showAssignModal(orderData.order, staffData.mechanics);
+                        showToast(`Assigning mechanics to order ${orderData.order.orderNo}`, 'success');
+                    } else {
+                        showToast(orderData.message || 'Error loading staff list', 'error');
+                    }
+                } catch (error) {
+                    showToast('Error loading assignment data', 'error');
+                }
+            });
+        });
+    } catch (error) {
+        vehicleList.innerHTML = '<p class="text-xs text-red-600">Error loading service orders. Please try again.</p>';
+        document.getElementById('pagination-info').textContent = 'Showing 0 of 0';
+        document.getElementById('prev-page').disabled = true;
+        document.getElementById('next-page').disabled = true;
+        showToast('Error loading service orders', 'error');
+    }
+}
+        
+        function populateEditForm(order) {
+            const form = document.getElementById('add-vehicle-form');
+            if (!order.id) {
+                console.error('No order ID provided for editing:', order);
+                showToast('Invalid order ID for editing', 'error');
+                return;
+            }
+            form.dataset.orderId = order.id;
+            form.dataset.currentModelId = order.modelId || '';
+
+            document.getElementById('vehicleNumber').value = order.vehicleNumber || '';
+            document.querySelector('input[name="customerName"]').value = order.customerName || 'Anonymous';
+            document.querySelector('input[name="phone"]').value = order.phone || '';
+            document.querySelector('select[name="company"]').value = order.company || '';
+
+            updateVehicleModels().then(() => {
+                document.querySelector('select[name="vehicleModel"]').value = order.modelId || '';
+            });
+
+            document.querySelector('select[name="vehicleType"]').value = order.type ? order.vehicleTypeId : '';
+            document.querySelector('textarea[name="complaint"]').value = order.complaint || '';
+            document.querySelector('input[name="priority"]').checked = order.priority === 'urgent';
+            document.querySelector('input[name="helmetGiven"]').checked = order.helmetGiven;
+            document.querySelector('input[name="keyGiven"]').checked = order.keyGiven;
+            document.querySelector('select[name="estimatedTime"]').value = order.estimatedCompletion?.includes('24') ? '24' : parseInt(order.estimatedCompletion?.split(':')[0] || 1);
+
+            document.querySelectorAll('input[name="commonService"]').forEach(checkbox => {
+                checkbox.checked = order.serviceType?.some(service => service.name === checkbox.value) || false;
+            });
+
+            loadMechanics().then(() => {
+                const staffList = document.getElementById('staff-list');
+                staffList.querySelectorAll('input[name="mechanic_ids"]').forEach(checkbox => {
+                    checkbox.checked = order.mechanics?.includes(parseInt(checkbox.value)) || false;
+                });
+            });
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = `<i class="fas fa-save w-4 h-4"></i><span>Update Order</span>`;
+        }
+
+        function showViewModal(order) {
+            const modalContent = document.getElementById('view-order-content');
+            const services = order.serviceType || [];
+            const totalPrice = services.reduce((sum, s) => sum + (s.price || 0), 0);
+
+            modalContent.innerHTML = `
+                <div class="space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <p class="font-medium text-gray-900">Order Number</p>
+                            <p class="text-gray-700">${order.orderNo || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Status</p>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}">
+                                ${order.status ? order.status.replace('-', ' ').toUpperCase() : 'N/A'}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Customer</p>
+                            <p class="text-gray-700">${order.customerName || 'Anonymous'} ${order.phone ? `(${order.phone})` : ''}</p>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Vehicle</p>
+                            <p class="text-gray-700">${order.vehicleNumber || 'N/A'} (${order.companyName || ''} ${order.model || ''})</p>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Priority</p>
+                            <span class="px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(order.priority)}">
+                                ${order.priority ? order.priority.toUpperCase() : 'N/A'}
+                            </span>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Estimated Completion</p>
+                            <p class="text-gray-700">${order.estimatedCompletion || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Created Date</p>
+                            <p class="text-gray-700">${order.createdDate || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">Mechanics</p>
+                            <p class="text-gray-700">${order.mechanics.length > 0 ? order.mechanics.join(', ') : 'None'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Complaint/Issue</p>
+                        <p class="text-gray-700 bg-gray-50 p-2 rounded-md">${order.complaint || 'No complaint provided'}</p>
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">Services (${services.length})</p>
+                        ${services.length > 0 ? `
+                            <table class="w-full text-xs text-gray-700 border border-gray-200 rounded-md mt-2">
+                                <thead>
+                                    <tr class="bg-gray-50">
+                                        <th class="px-3 py-1.5 text-left font-medium">Service</th>
+                                        <th class="px-3 py-1.5 text-right font-medium">Price (NPR)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${services.map(s => `
+                                        <tr class="border-t">
+                                            <td class="px-3 py-1.5">${s.name || 'Unknown'}</td>
+                                            <td class="px-3 py-1.5 text-right">${(s.price || 0).toFixed(2)}</td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr class="border-t font-medium">
+                                        <td class="px-3 py-1.5">Total</td>
+                                        <td class="px-3 py-1.5 text-right">NPR ${totalPrice.toFixed(2)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        ` : `
+                            <p class="text-gray-600">No services selected</p>
+                        `}
+                    </div>
+                    ${order.status === 'in-progress' ? `
+                        <div>
+                            <p class="font-medium text-gray-900">Progress</p>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs text-gray-600">${order.progress || 0}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                <div class="bg-blue-600 h-1.5 rounded-full" style="width: ${order.progress || 0}%"></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="flex space-x-2">
+                        <p class="font-medium text-gray-900">Accessories</p>
+                        <p class="text-gray-700">${order.helmetGiven ? 'Helmet Given, ' : ''}${order.keyGiven ? 'Key Given' : ''}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('view-order-modal').classList.remove('hidden');
+        }
+
+        function showAssignModal(order, mechanics) {
+            const mechanicList = document.getElementById('mechanic-list');
+            mechanicList.innerHTML = '';
+            if (!order.id || isNaN(order.id)) {
+                console.error('Invalid order ID:', order.id);
+                showToast('Invalid order ID for assignment', 'error');
+                return;
+            }
+            document.getElementById('assign-form').dataset.orderId = order.id;
+            console.log('Managing mechanics for order ID:', order.id);
+
+            if (!mechanics || mechanics.length === 0) {
+                mechanicList.innerHTML = '<p class="text-xs text-gray-600">No mechanics available</p>';
+                document.querySelector('#assign-form button[type="submit"]').disabled = true;
+                return;
+            }
+
+            mechanics.forEach(mechanic => {
+                const isChecked = order.mechanics.includes(mechanic.id);
+                mechanicList.insertAdjacentHTML('beforeend', `
+                    <label class="flex items-center space-x-2 text-xs">
+                        <input type="checkbox" name="mechanic_ids" value="${mechanic.id}" ${isChecked ? 'checked' : ''} class="h-3 w-3 text-purple-600 border-gray-300 rounded focus:ring-purple-500"/>
+                        <span>${mechanic.username} (${mechanic.status}, ${mechanic.current_jobs} task${mechanic.current_jobs !== 1 ? 's' : ''})</span>
+                    </label>
+                `);
+            });
+
+            document.querySelector('#assign-form button[type="submit"]').disabled = false;
+            document.getElementById('assign-mechanic-modal').classList.remove('hidden');
+        }
+
+        async function updateVehicleModels() {
+            const companyId = document.getElementById('vehicle-company').value;
+            const modelSelect = document.getElementById('vehicle-model');
+            modelSelect.innerHTML = '<option value="">Select model</option>';
+
+            if (companyId) {
+                try {
+                    const data = await fetchWithErrorHandling(`/admin/get-vehicle-models/?company_id=${companyId}`);
+                    if (data.models && data.models.length > 0) {
+                        data.models.forEach(model => {
+                            modelSelect.insertAdjacentHTML('beforeend', `<option value="${model.id}">${model.name}</option>`);
+                        });
+                        const form = document.getElementById('add-vehicle-form');
+                        if (form.dataset.orderId && form.dataset.currentModelId) {
+                            modelSelect.value = form.dataset.currentModelId;
+                        }
+                    } else {
+                        showToast('No models found for this company', 'error');
+                    }
+                } catch (error) {
+                    showToast('Error loading vehicle models', 'error');
+                }
+            } else {
+                showToast('Please select a company first', 'error');
+            }
+        }
+
+        document.getElementById('add-vehicle-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn.disabled) {
+                console.warn('Form submission already in progress');
+                return;
+            }
+            submitBtn.disabled = true;
+
+            const isEditing = !!form.dataset.orderId;
+            const formData = new FormData(form);
+            const vehicleNumber = formData.get('vehicleNumber');
+            if (!vehicleNumber) {
+                console.error('Vehicle number is required');
+                showToast('Vehicle number is required', 'error');
+                submitBtn.disabled = false;
+                return;
+            }
+
+            const services = [];
+            document.querySelectorAll('input[name="commonService"]:checked').forEach(checkbox => {
+                const price = parseFloat(checkbox.dataset.price || 0);
+                services.push({
+                    name: checkbox.value,
+                    price: isNaN(price) ? 0 : price
+                });
+            });
+
+            const mechanics = [];
+            document.querySelectorAll('input[name="mechanic_ids"]:checked').forEach(checkbox => {
+                mechanics.push(checkbox.value);
+            });
+
+            const payload = {
+                order_id: isEditing ? form.dataset.orderId : null,
+                customerName: formData.get('customerName') || 'Anonymous',
+                phone: formData.get('phone') || null,
+                vehicleNumber: vehicleNumber,
+                company: formData.get('company') || null,
+                vehicleModel: formData.get('vehicleModel') || null,
+                vehicleType: formData.get('vehicleType') || null,
+                complaint: formData.get('complaint') || '',
+                commonService: services.map(s => s.name),
+                estimatedTime: formData.get('estimatedTime') || '1',
+                priority: formData.get('priority') === 'urgent' ? 'urgent' : 'normal',
+                helmetGiven: formData.get('helmetGiven') === 'on',
+                keyGiven: formData.get('keyGiven') === 'on',
+                mechanic_ids: mechanics
+            };
+
+            console.log('Submitting form with payload:', JSON.stringify(payload));
+
+            try {
+                const url = isEditing ? '/admin/update-service-order/' : '/admin/add-vehicle-and-order/';
+                const data = await fetchWithErrorHandling(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (data.status === 'success') {
+                    showToast(isEditing ? 'Order updated successfully' : 'Order created successfully', 'success');
+                    form.reset();
+                    form.dataset.orderId = '';
+                    form.dataset.currentModelId = '';
+                    submitBtn.innerHTML = `<i class="fas fa-plus w-4 h-4"></i><span>Add Vehicle & Create Order</span>`;
+                    const staffList = document.getElementById('staff-list');
+                    const vehicleResults = document.getElementById('vehicle-results');
+                    const customerResults = document.getElementById('customer-results');
+                    const visitHistory = document.getElementById('visit-history');
+                    if (staffList) staffList.innerHTML = '';
+                    if (vehicleResults) vehicleResults.classList.add('hidden');
+                    if (customerResults) customerResults.classList.add('hidden');
+                    if (visitHistory) visitHistory.classList.add('hidden');
+
+                    if (!isEditing && data.bill_id) {
+                        const posUrl = `/admin/pos-billing/?bill_id=${data.bill_id}&orderNo=${data.order_no}&services=${encodeURIComponent(JSON.stringify(services))}&total=${services.reduce((sum, s) => sum + s.price, 0)}&customer=${encodeURIComponent(payload.customerName)}&vehicle=${encodeURIComponent(payload.vehicleNumber)}`;
+                        window.location.href = posUrl;
+                    } else {
+                        await renderVehicleList();
+                    }
+                } else {
+                    showToast(data.message || 'Error submitting order', 'error');
+                }
+            } catch (error) {
+                console.error('Submission error:', error);
+                showToast(error.message || 'Error submitting order', 'error');
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        document.getElementById('customer-search').addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            const resultsDiv = document.getElementById('customer-results');
+            const noCustomerFound = document.getElementById('no-customer-found');
+            const visitHistory = document.getElementById('visit-history');
+            const historyList = document.getElementById('history-list');
+
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.add('hidden');
+            noCustomerFound.classList.add('hidden');
+            visitHistory.classList.add('hidden');
+
+            if (query.length < 2) return;
+
+            try {
+                const data = await fetchWithErrorHandling(`/admin/search-customer/?q=${encodeURIComponent(query)}`);
+                if (data.customers && data.customers.length > 0) {
+                    data.customers.forEach(customer => {
+                        resultsDiv.insertAdjacentHTML('beforeend', `
+                            <div class="p-2 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100 text-xs" data-id="${customer.id}" data-name="${customer.name}" data-phone="${customer.phone}">
+                                ${customer.name} (${customer.phone || 'No phone'})
+                            </div>
+                        `);
+                    });
+                    resultsDiv.classList.remove('hidden');
+
+                    resultsDiv.querySelectorAll('div').forEach(div => {
+                        div.addEventListener('click', () => {
+                            document.querySelector('input[name="customerName"]').value = div.dataset.name;
+                            document.querySelector('input[name="phone"]').value = div.dataset.phone;
+                            resultsDiv.classList.add('hidden');
+
+                            const visits = data.customers.find(c => c.id == div.dataset.id).visits;
+                            if (visits && visits.length > 0) {
+                                historyList.innerHTML = visits.map(visit => `
+                                    <div class="p-2 bg-white rounded-md border border-gray-200 mb-1">
+                                        <p class="text-xs text-gray-900">${visit.orderNo} - ${visit.date}</p>
+                                        <p class="text-xs text-gray-600">${visit.service}</p>
+                                    </div>
+                                `).join('');
+                                visitHistory.classList.remove('hidden');
+                            }
+                        });
+                    });
+                } else {
+                    noCustomerFound.classList.remove('hidden');
+                }
+            } catch (error) {
+                showToast('Error searching customers', 'error');
+            }
+        });
+
+        document.getElementById('vehicleNumber').addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            const resultsDiv = document.getElementById('vehicle-results');
+            const noVehicleFound = document.getElementById('no-vehicle-found');
+
+            resultsDiv.innerHTML = '';
+            resultsDiv.classList.add('hidden');
+            noVehicleFound.classList.add('hidden');
+
+            if (query.length < 3) return;
+
+            try {
+                const data = await fetchWithErrorHandling(`/admin/search-vehicle/?q=${encodeURIComponent(query)}`);
+                if (data.vehicles && data.vehicles.length > 0) {
+                    data.vehicles.forEach(vehicle => {
+                        resultsDiv.insertAdjacentHTML('beforeend', `
+                            <div class="p-2 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100 text-xs" 
+                                 data-number="${vehicle.vehicleNumber}" 
+                                 data-company="${vehicle.company}" 
+                                 data-model="${vehicle.model}" 
+                                 data-type="${vehicle.type}">
+                                ${vehicle.vehicleNumber} (${vehicle.company} ${vehicle.model})
+                            </div>
+                        `);
+                    });
+                    resultsDiv.classList.remove('hidden');
+
+                    resultsDiv.querySelectorAll('div').forEach(div => {
+                        div.addEventListener('click', async () => {
+                            document.getElementById('vehicleNumber').value = div.dataset.number;
+                            document.getElementById('vehicle-company').value = div.dataset.company;
+                            await updateVehicleModels();
+                            document.getElementById('vehicle-model').value = div.dataset.model;
+                            document.querySelector('select[name="vehicleType"]').value = div.dataset.type;
+                            resultsDiv.classList.add('hidden');
+                        });
+                    });
+                } else {
+                    noVehicleFound.classList.remove('hidden');
+                }
+            } catch (error) {
+                showToast('Error searching vehicles', 'error');
+            }
+        });
+
+        document.getElementById('reset-form-btn').addEventListener('click', () => {
+            const form = document.getElementById('add-vehicle-form');
+            form.reset();
+            form.dataset.orderId = '';
+            form.dataset.currentModelId = '';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = `<i class="fas fa-plus w-4 h-4"></i><span>Add Vehicle & Create Order</span>`;
+            document.getElementById('staff-list').innerHTML = '';
+            document.getElementById('vehicle-results').classList.add('hidden');
+            document.getElementById('customer-results').classList.add('hidden');
+            document.getElementById('visit-history').classList.add('hidden');
+            showToast('Form reset successfully', 'success');
+        });
+
+        document.getElementById('assign-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const orderId = form.dataset.orderId;
+            const mechanicIds = Array.from(form.querySelectorAll('input[name="mechanic_ids"]:checked')).map(input => input.value);
+            console.log('Submitting assign form with:', { order_id: orderId, mechanic_ids: mechanicIds });
+
+            if (!orderId || isNaN(orderId)) {
+                showToast('Invalid order ID. Please try again.', 'error');
+                return;
+            }
+
+            try {
+                const data = await fetchWithErrorHandling('/admin/assign-mechanic/', {
+                    method: 'POST',
+                    body: JSON.stringify({ order_id: orderId, mechanic_ids: mechanicIds })
+                });
+                if (data.status === 'success') {
+                    showToast(data.message, 'success');
+                    document.getElementById('assign-mechanic-modal').classList.add('hidden');
+                    await renderVehicleList();
+                } else {
+                    showToast(data.message || 'Error assigning mechanics', 'error');
+                }
+            } catch (error) {
+                showToast(error.message || 'Error assigning mechanics', 'error');
+            }
+        });
+
+        document.getElementById('search-input').addEventListener('input', debounce(() => {
+            currentPage = 1;
+            renderVehicleList();
+        }, 500));
+
+        document.getElementById('status-filter').addEventListener('change', () => {
+            currentPage = 1;
+            renderVehicleList();
+        });
+
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                renderVehicleList(currentPage);
+            }
+        });
+
+        document.getElementById('next-page').addEventListener('click', () => {
+            currentPage++;
+            renderVehicleList(currentPage);
+        });
+
+        document.getElementById('vehicle-company').addEventListener('change', updateVehicleModels);
+
+        async function loadMechanics() {
+            try {
+                const data = await fetchWithErrorHandling('/admin/staff-list/');
+                if (data.mechanics) {
+                    const staffList = document.getElementById('staff-list');
+                    staffList.innerHTML = data.mechanics.map(m => `
+                        <label class="flex items-center space-x-2 text-xs">
+                            <input type="checkbox" name="mechanic_ids" value="${m.id}" class="h-3 w-3 text-purple-600 border-gray-300 rounded focus:ring-purple-500"/>
+                            <span>${m.username} (${m.status}, ${m.current_jobs} task${m.current_jobs !== 1 ? 's' : ''})</span>
+                        </label>
+                    `).join('');
+                } else {
+                    showToast(data.message || 'No mechanics found', 'error');
+                    document.getElementById('staff-list').innerHTML = '<p class="text-xs text-gray-600">No mechanics available</p>';
+                }
+            } catch (error) {
+                showToast('Error loading mechanics', 'error');
+                document.getElementById('staff-list').innerHTML = '<p class="text-xs text-gray-600">Error loading mechanics</p>';
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func.apply(this, args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMechanics();
+            renderVehicleList();
+        });
+    </script>
+</body>
+</html>
+{% endblock %}

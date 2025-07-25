@@ -1,0 +1,1244 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}POS Billing - Garage POS{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>POS Billing - Garage POS</title>
+    <style>
+        .item-card {
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            background-color: #fff;
+        }
+        .item-image {
+            width: 48px;
+            height: 48px;
+            background-color: #f3f4f6;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .item-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .pagination button {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background-color: #ffffff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            background-color: #e5e7eb;
+            cursor: not-allowed;
+        }
+        .bill-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .bill-preview-table th, .bill-preview-table td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: left;
+        }
+        .bill-preview-table th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="p-3 sm:p-4 space-y-3 max-w-7xl mx-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            <!-- Left Column: Search, Pending Bills, Item Selection -->
+            <div class="lg:col-span-2 space-y-3">
+                <!-- Global Search -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3"></i>
+                        <input
+                            type="text"
+                            id="global-search"
+                            placeholder="Search bills, customers, vehicles, or orders..."
+                            class="w-full pl-7 pr-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                    </div>
+                </div>
+
+                <!-- Pending/In-Progress Bills -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 max-h-40 overflow-y-auto">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-2">Pending/In-Progress Bills</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2" id="pending-bills"></div>
+                </div>
+
+                <!-- Item Selection -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-2">Add Parts or Services to Bill</h2>
+                    <div class="relative mb-2">
+                        <i class="fas fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3"></i>
+                        <input
+                            type="text"
+                            id="item-search"
+                            placeholder="Search parts or services..."
+                            class="w-full pl-7 pr-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2" id="item-list"></div>
+                </div>
+            </div>
+
+            <!-- Right Column: Customer Info & Bill Summary -->
+            <div class="lg:col-span-1 space-y-3">
+                <!-- Customer Info -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-sm font-semibold text-gray-900">Customer Info</h2>
+                        <button id="edit-customer-btn" class="text-blue-600 hover:text-blue-700 text-xs font-medium">Edit</button>
+                    </div>
+                    <div id="customer-info" class="space-y-1">
+                        <p class="text-xs text-gray-500">No customer selected</p>
+                    </div>
+                </div>
+
+                <!-- Bill Items -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-2">Bill Items</h2>
+                    <div id="bill-items" class="space-y-2">
+                        <div class="text-center py-4">
+                            <i class="fas fa-shopping-cart w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                            <p class="text-xs text-gray-500">No items added</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bill Calculation -->
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                    <h2 class="text-sm font-semibold text-gray-900 mb-2">Bill Summary</h2>
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Subtotal:</span>
+                            <span id="subtotal" class="font-medium">NPR 0.00</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Discount:</span>
+                            <div class="flex items-center space-x-1">
+                                <select id="discount-type" class="border border-gray-300 rounded px-1 py-0.5 text-xs">
+                                    <option value="percentage">%</option>
+                                    <option value="amount">NPR</option>
+                                </select>
+                                <input
+                                    type="number"
+                                    id="discount"
+                                    min="0"
+                                    class="w-16 text-right border border-gray-300 rounded px-2 py-0.5 text-xs"
+                                />
+                                <span id="discount-amount" class="font-medium text-green-600">NPR 0.00</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">VAT (13%):</span>
+                            <span id="tax-amount" class="font-medium">NPR 0.00</span>
+                        </div>
+                        <div class="border-t pt-2">
+                            <div class="flex items-center space-x-1 mb-1">
+                                <input type="checkbox" id="customer-credit" class="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"/>
+                                <label for="customer-credit" class="text-xs font-medium text-gray-700">Customer Credit</label>
+                            </div>
+                            <div id="credit-section" class="hidden flex justify-between items-center">
+                                <span class="text-gray-600">Credit Amount:</span>
+                                <div class="flex items-center space-x-1">
+                                    <input
+                                        type="number"
+                                        id="credit-amount"
+                                        min="0"
+                                        class="w-16 text-right border border-gray-300 rounded px-2 py-0.5 text-xs"
+                                    />
+                                    <span id="credit-display" class="font-medium text-orange-600">NPR 0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-t pt-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm font-semibold">Total:</span>
+                                <div class="text-right">
+                                    <span id="final-amount" class="text-sm font-bold text-blue-600">NPR 0.00</span>
+                                    <div id="credit-info" class="hidden text-xs text-orange-600"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Payment Mode -->
+                    <div class="mt-3">
+                        <h3 class="text-xs font-medium text-gray-700 mb-2">Payment Mode</h3>
+                        <div class="grid grid-cols-3 gap-1">
+                            <button id="payment-cash" class="bg-blue-600 text-white p-2 rounded-md text-center text-xs transition-colors duration-200">
+                                <i class="fas fa-money-bill w-4 h-4 mx-auto mb-1"></i>
+                                <span>Cash</span>
+                            </button>
+                            <button id="payment-card" class="bg-gray-100 text-gray-700 p-2 rounded-md text-center text-xs hover:bg-gray-200 transition-colors duration-200">
+                                <i class="fas fa-credit-card w-4 h-4 mx-auto mb-1"></i>
+                                <span>Card</span>
+                            </button>
+                            <button id="payment-upi" class="bg-gray-100 text-gray-700 p-2 rounded-md text-center text-xs hover:bg-gray-200 transition-colors duration-200">
+                                <i class="fas fa-mobile-alt w-4 h-4 mx-auto mb-1"></i>
+                                <span>UPI</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="mt-3 space-y-2">
+                        <button id="save-pending-btn" class="w-full bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                            <i class="fas fa-receipt w-3 h-3"></i>
+                            <span>Save as Pending</span>
+                        </button>
+                        <button id="generate-bill-btn" class="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                            <i class="fas fa-calculator w-3 h-3"></i>
+                            <span>Generate Bill</span>
+                        </button>
+                        <div class="flex space-x-1">
+                            <button id="print-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                                <i class="fas fa-print w-3 h-3"></i>
+                                <span>Print</span>
+                            </button>
+                            <button id="whatsapp-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                                <i class="fab fa-whatsapp w-3 h-3"></i>
+                                <span>WhatsApp</span>
+                            </button>
+                        </div>
+                        <button id="clear-bill-btn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                            Clear Bill
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Bills -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3 mt-3">
+            <h2 class="text-sm font-semibold text-gray-900 mb-2">Recent Bills</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-1.5 text-xs font-medium text-gray-500">Bill No.</th>
+                            <th class="text-left py-1.5 text-xs font-medium text-gray-500">Customer</th>
+                            <th class="text-left py-1.5 text-xs font-medium text-gray-500">Order/Vehicle</th>
+                            <th class="text-left py-1.5 text-xs font-medium text-gray-500">Amount</th>
+                            <th class="text-left py-1.5 text-xs font-medium text-gray-500">Status</th>
+                            <th class="text-left py-1.5 text-xs font-medium text-gray-500">Date</th>
+                            <th class="text-left py-1.5 text-xs font-medium text-gray-500">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-bills"></tbody>
+                </table>
+                <div class="pagination">
+                    <button id="prev-page" disabled>Previous</button>
+                    <span id="page-info"></span>
+                    <button id="next-page">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Form Modal -->
+        <div id="customer-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-md w-full">
+                <div class="border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900">Customer Information</h2>
+                    <button id="close-customer-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 space-y-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Search Customer</label>
+                        <input
+                            type="text"
+                            id="customer-search"
+                            placeholder="Enter name or phone"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                        <div id="customer-results" class="mt-1 space-y-1 hidden"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Customer Name</label>
+                        <input
+                            type="text"
+                            id="customer-name"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Enter customer name (optional)"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
+                        <input
+                            type="tel"
+                            id="customer-phone"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="+977 XXXXX XXXXX (optional)"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Number</label>
+                        <input
+                            type="text"
+                            id="customer-vehicle"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="BA-2-PA-XXXX (optional)"
+                        />
+                    </div>
+                    <div id="visit-history" class="hidden bg-gray-50 rounded-md p-2 text-xs">
+                        <h4 class="font-medium text-gray-900 mb-1">Visit History</h4>
+                        <div id="history-list"></div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="cancel-customer-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="save-customer-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bill Preview Modal -->
+        <div id="bill-preview-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div class="border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900">Bill Preview</h2>
+                    <button id="close-bill-preview" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div id="bill-preview-content" class="p-4 text-xs"></div>
+                <div class="bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="print-bill-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                        <i class="fas fa-print w-3 h-3"></i>
+                        <span>Print</span>
+                    </button>
+                    <button id="whatsapp-bill-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                        <i class="fab fa-whatsapp w-3 h-3"></i>
+                        <span>WhatsApp</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phone Number Prompt Modal -->
+        <div id="phone-prompt-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-md w-full">
+                <div class="border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900">Enter Customer Phone Number</h2>
+                    <button id="close-phone-prompt" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 space-y-2">
+                    <p class="text-xs text-gray-600">Please provide a phone number to send the bill via WhatsApp.</p>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Phone Number</label>
+                        <input
+                            type="tel"
+                            id="whatsapp-phone"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="+977 XXXXX XXXXX"
+                        />
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="cancel-phone-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="save-phone-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-semibold transition-colors duration-200">
+                        Save and Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize state
+        let billItems = [];
+        let customerInfo = { id: null, name: '', phone: '', vehicle: '', vehicle_id: null, order_no: null };
+        let paymentMode = 'cash';
+        let discount = 0;
+        let discountType = 'percentage';
+        let customerCredit = false;
+        let creditAmount = 0;
+        let selectedBill = null;
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        const clientGarage = {{ client_garage|safe }};
+
+        // CSRF Token
+        const getCsrfToken = () => {
+            return document.querySelector('meta[name="csrf-token"]').content || '{{ csrf_token }}';
+        };
+
+        // Initial data from vehicle creation
+        const initialData = {{ initial_data|safe }};
+        if (initialData) {
+            if (initialData.customer) {
+                customerInfo = {
+                    id: initialData.customer.id,
+                    name: initialData.customer.name || 'Anonymous',
+                    phone: initialData.customer.phone || '',
+                    vehicle: initialData.vehicle?.vehicle_number || '',
+                    vehicle_id: initialData.vehicle?.id,
+                    order_no: initialData.order_no
+                };
+            }
+            if (initialData.items) {
+                billItems = initialData.items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: parseFloat(item.price),
+                    quantity: item.quantity,
+                    image: item.image || (item.isService ? 'fa-tools' : 'fa-cogs'),
+                    isService: item.isService
+                }));
+            }
+            if (initialData.bill_id) {
+                selectedBill = { id: initialData.bill_id, bill_no: initialData.bill_no, order_no: initialData.order_no };
+                discountType = initialData.discount_type || 'percentage';
+                discount = parseFloat(initialData.discount_value) || 0;
+                customerCredit = initialData.credit_amount > 0;
+                creditAmount = parseFloat(initialData.credit_amount) || 0;
+                paymentMode = initialData.payment_mode || 'cash';
+            }
+            document.getElementById('discount-type').value = discountType;
+            document.getElementById('discount').value = discount;
+            document.getElementById('customer-credit').checked = customerCredit;
+            document.getElementById('credit-amount').value = creditAmount;
+            document.getElementById('credit-section').classList.toggle('hidden', !customerCredit);
+            document.getElementById('credit-display').textContent = `-NPR ${creditAmount.toFixed(2)}`;
+            document.querySelectorAll('[id^="payment-"]').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                b.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            document.getElementById(`payment-${paymentMode}`).classList.remove('bg-gray-100', 'text-gray-700');
+            document.getElementById(`payment-${paymentMode}`).classList.add('bg-blue-600', 'text-white');
+            renderCustomerInfo();
+            renderBillItems();
+            calculateBill();
+        }
+
+        // Helper functions
+        function calculateBill() {
+            const subtotal = billItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discountAmount = discountType === 'percentage' ? (subtotal * discount) / 100 : discount;
+            const taxAmount = (subtotal - discountAmount) * 0.13;
+            const total = subtotal - discountAmount + taxAmount;
+            const finalAmount = customerCredit ? total - creditAmount : total;
+
+            document.getElementById('subtotal').textContent = `NPR ${subtotal.toFixed(2)}`;
+            document.getElementById('discount-amount').textContent = `-NPR ${discountAmount.toFixed(2)}`;
+            document.getElementById('tax-amount').textContent = `NPR ${taxAmount.toFixed(2)}`;
+            document.getElementById('final-amount').textContent = `NPR ${finalAmount.toFixed(2)}`;
+            document.getElementById('credit-info').textContent = customerCredit && creditAmount > 0 ? `Credit: NPR ${creditAmount.toFixed(2)}` : '';
+            document.getElementById('credit-info').classList.toggle('hidden', !customerCredit || creditAmount <= 0);
+
+            document.getElementById('generate-bill-btn').disabled = billItems.length === 0 || (customerCredit && creditAmount > total);
+            document.getElementById('save-pending-btn').disabled = billItems.length === 0;
+            return { subtotal, discountAmount, taxAmount, total, finalAmount };
+        }
+
+        function addItemToBill(item) {
+            const existingItem = billItems.find(i => i.id === item.id && i.isService === item.isService);
+            if (existingItem) {
+                if (!item.isService) {
+                    const part = billItems.filter(i => i.id === item.id && !i.isService).reduce((sum, i) => sum + i.quantity, 0);
+                    if (part >= item.inStock) {
+                        alert('Cannot add more of this part; stock limit reached.');
+                        return;
+                    }
+                }
+                existingItem.quantity += 1;
+            } else {
+                billItems.push({
+                    id: item.id,
+                    name: item.name,
+                    price: parseFloat(item.price),
+                    quantity: 1,
+                    image: item.image || (item.isService ? 'fa-tools' : 'fa-cogs'),
+                    isService: item.isService
+                });
+            }
+            renderBillItems();
+            calculateBill();
+        }
+
+        function renderBillItems() {
+            const billItemsDiv = document.getElementById('bill-items');
+            billItemsDiv.innerHTML = billItems.length === 0 ? `
+                <div class="text-center py-4">
+                    <i class="fas fa-shopping-cart w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                    <p class="text-xs text-gray-500">No items added</p>
+                </div>
+            ` : billItems.map((item, index) => `
+                <div class="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
+                            <i class="fas ${item.image} w-4 h-4 text-gray-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-gray-900">${item.name}</p>
+                            <p class="text-xs text-gray-600">NPR ${item.price.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button class="decrease-qty text-gray-600 hover:text-gray-800 text-xs" data-index="${index}">-</button>
+                        <span class="text-xs font-medium">${item.quantity}</span>
+                        <button class="increase-qty text-gray-600 hover:text-gray-800 text-xs" data-index="${index}">+</button>
+                        <button class="remove-item text-red-600 hover:text-red-800 text-xs" data-index="${index}">
+                            <i class="fas fa-trash w-3 h-3"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            document.querySelectorAll('.increase-qty').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index);
+                    if (!billItems[index].isService) {
+                        const part = billItems.filter(i => i.id === billItems[index].id && !i.isService).reduce((sum, i) => sum + i.quantity, 0);
+                        const itemStock = (async () => {
+                            const response = await fetch(`/pos/get_item/?item_id=${billItems[index].id}`);
+                            const item = await response.json();
+                            return item.inStock || 0;
+                        })();
+                        itemStock.then(stock => {
+                            if (part >= stock) {
+                                alert('Cannot add more of this part; stock limit reached.');
+                                return;
+                            }
+                            billItems[index].quantity += 1;
+                            renderBillItems();
+                            calculateBill();
+                        });
+                    } else {
+                        billItems[index].quantity += 1;
+                        renderBillItems();
+                        calculateBill();
+                    }
+                });
+            });
+            document.querySelectorAll('.decrease-qty').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index);
+                    if (billItems[index].quantity > 1) {
+                        billItems[index].quantity -= 1;
+                    } else {
+                        billItems.splice(index, 1);
+                    }
+                    renderBillItems();
+                    calculateBill();
+                });
+            });
+            document.querySelectorAll('.remove-item').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index);
+                    billItems.splice(index, 1);
+                    renderBillItems();
+                    calculateBill();
+                });
+            });
+        }
+
+        function renderCustomerInfo() {
+            const customerInfoDiv = document.getElementById('customer-info');
+            customerInfoDiv.innerHTML = customerInfo.id || customerInfo.name || customerInfo.phone || customerInfo.vehicle || customerInfo.order_no ? `
+                ${customerInfo.name ? `
+                    <div class="flex items-center space-x-1">
+                        <i class="fas fa-user w-3 h-3 text-gray-400"></i>
+                        <span class="text-xs text-gray-900">${customerInfo.name}</span>
+                    </div>
+                ` : ''}
+                ${customerInfo.phone ? `
+                    <div class="flex items-center space-x-1">
+                        <i class="fas fa-phone w-3 h-3 text-gray-400"></i>
+                        <span class="text-xs text-gray-900">${customerInfo.phone}</span>
+                    </div>
+                ` : ''}
+                ${customerInfo.vehicle ? `
+                    <div class="flex items-center space-x-1">
+                        <i class="fas fa-motorcycle w-3 h-3 text-gray-400"></i>
+                        <span class="text-xs text-gray-900">${customerInfo.vehicle}</span>
+                    </div>
+                ` : ''}
+                ${customerInfo.order_no ? `
+                    <div class="flex items-center space-x-1">
+                        <i class="fas fa-receipt w-3 h-3 text-gray-400"></i>
+                        <span class="text-xs text-gray-900">${customerInfo.order_no}</span>
+                    </div>
+                ` : ''}
+            ` : `<p class="text-xs text-gray-500">No customer selected</p>`;
+        }
+
+        async function renderVisitHistory(customer) {
+            const response = await fetch(`/search_customer/?q=${encodeURIComponent(customer.phone)}`);
+            const data = await response.json();
+            const visitHistory = document.getElementById('visit-history');
+            const historyList = document.getElementById('history-list');
+            if (data.customers[0]?.history?.length > 0) {
+                visitHistory.classList.remove('hidden');
+                historyList.innerHTML = data.customers[0].history.map(h => `
+                    <p>${h.date}: ${h.vehicle} - NPR ${h.total.toFixed(2)}</p>
+                `).join('');
+            } else {
+                visitHistory.classList.add('hidden');
+            }
+        }
+
+<!-- Replace the fetchPendingBills function in the <script> section -->
+async function fetchPendingBills(searchTerm = '') {
+    try {
+        const response = await fetch(`/pos/get_bills/?q=${encodeURIComponent(searchTerm)}&status=pending,in-progress`);
+        const data = await response.json();
+        const pendingBillsDiv = document.getElementById('pending-bills');
+        pendingBillsDiv.innerHTML = '';
+        data.bills.forEach(bill => {
+            const displayStatus = bill.status === 'in-progress' ? 'In Progress' : bill.status;
+            const vehicleOrOrder = bill.vehicle_number || bill.order_no || 'N/A';
+            const billCard = `
+                <button class="p-2 border rounded-md text-left transition-colors duration-200 text-xs ${selectedBill?.id === bill.id ? 'border-blue-600 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}" data-bill-id="${bill.id}">
+                    <div class="font-medium text-gray-900">${bill.bill_no}</div>
+                    <div class="text-gray-600">${vehicleOrOrder}</div>
+                    <div class="font-medium text-blue-600">NPR ${bill.total.toFixed(2)}</div>
+                    <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium ${bill.status === 'in-progress' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}">${displayStatus.toUpperCase()}</span>
+                </button>
+            `;
+            pendingBillsDiv.insertAdjacentHTML('beforeend', billCard);
+        });
+        document.querySelectorAll('#pending-bills button').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch(`/pos/get_bill/?bill_id=${btn.dataset.billId}`);
+                    const bill = await response.json();
+                    if (!bill.items) {
+                        console.error(`No items found for bill ${btn.dataset.billId}`, bill);
+                        alert('Failed to load bill items. Please try again.');
+                        return;
+                    }
+                    selectedBill = { id: bill.id, bill_no: bill.bill_no, order_no: bill.order_no };
+                    customerInfo = {
+                        id: bill.customer_id,
+                        name: bill.customer_name || 'Anonymous',
+                        phone: bill.customer_phone || '',
+                        vehicle: bill.vehicle_number || '',
+                        vehicle_id: bill.vehicle_id,
+                        order_no: bill.order_no
+                    };
+                    billItems = bill.items.map(item => ({
+                        id: item.id,
+                        name: item.name,
+                        price: parseFloat(item.price),
+                        quantity: item.quantity,
+                        image: item.image || (item.isService ? 'fa-tools' : 'fa-cogs'),
+                        isService: item.isService
+                    }));
+                    discountType = bill.discount_type;
+                    discount = parseFloat(bill.discount_value);
+                    customerCredit = bill.credit_amount > 0;
+                    creditAmount = parseFloat(bill.credit_amount);
+                    paymentMode = bill.payment_mode;
+                    document.getElementById('discount-type').value = discountType;
+                    document.getElementById('discount').value = discount;
+                    document.getElementById('customer-credit').checked = customerCredit;
+                    document.getElementById('credit-amount').value = creditAmount;
+                    document.getElementById('credit-section').classList.toggle('hidden', !customerCredit);
+                    document.getElementById('credit-display').textContent = `-NPR ${creditAmount.toFixed(2)}`;
+                    document.querySelectorAll('[id^="payment-"]').forEach(b => {
+                        b.classList.remove('bg-blue-600', 'text-white');
+                        b.classList.add('bg-gray-100', 'text-gray-700');
+                    });
+                    document.getElementById(`payment-${bill.payment_mode}`).classList.remove('bg-gray-100', 'text-gray-700');
+                    document.getElementById(`payment-${bill.payment_mode}`).classList.add('bg-blue-600', 'text-white');
+                    renderCustomerInfo();
+                    renderBillItems();
+                    calculateBill();
+                    fetchPendingBills(); // Refresh pending bills to update selection highlight
+                } catch (error) {
+                    console.error(`Error fetching bill ${btn.dataset.billId}:`, error);
+                    alert('Failed to load bill details. Please try again.');
+                }
+            });
+        });
+    } catch (error) {
+        console.error('Error fetching pending bills:', error);
+        alert('Failed to load pending bills.');
+    }
+}
+
+
+
+async function fetchItems(searchTerm = '') {
+    try {
+        const response = await fetch(`/pos/get_items/?q=${encodeURIComponent(searchTerm)}`);
+        const data = await response.json();
+        const itemList = document.getElementById('item-list');
+        itemList.innerHTML = data.items.map(item => `
+            <div class="item-card">
+                <div class="flex items-start space-x-2">
+                    <div class="item-image">
+                        <i class="fas ${item.image || (item.isService ? 'fa-tools' : 'fa-cogs')} w-6 h-6 text-xs text-gray-600"></i>
+                    </div>
+                    <div class="item-details">
+                        <h3 class="text-xs font-medium text-gray-900">${item.name}</h3>
+                        <p class="font-semibold text-gray-900 text-xs">NPR ${item.price.toFixed(2)}</p>
+                        <span class="inline-block bg-blue-100 text-blue-800 text-xs px-1 py-0.5 rounded-full">${item.category}</span>
+                        <p class="text-xs text-gray-500">${item.isService ? 'Available' : item.inStock + ' in stock'}</p>
+                    </div>
+                </div>
+                <button class="add-item-btn w-full bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1 ${item.isService || item.inStock > 0 ? '' : 'opacity-50 cursor-not-allowed'}" data-id="${item.id}" ${item.isService || item.inStock > 0 ? '' : 'disabled'}>
+                    <i class="fas fa-plus w-3 h-3"></i>
+                    <span>Add to Bill</span>
+                </button>
+            </div>
+        `).join('');
+        document.querySelectorAll('.add-item-btn:not(:disabled)').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const response = await fetch(`/pos/get_item/?item_id=${btn.dataset.id}`);
+                const item = await response.json();
+                addItemToBill(item);
+            });
+        });
+    } catch (error) {
+        console.error('Error fetching items:', error);
+        alert('Failed to load items.');
+    }
+}
+
+        async function fetchRecentBills(page = 1) {
+            try {
+                const response = await fetch(`/pos/get_bills/?status=completed,credit&page=${page}`);
+                const data = await response.json();
+                const recentBillsTable = document.getElementById('recent-bills');
+                recentBillsTable.innerHTML = data.bills.map(bill => `
+                    <tr class="border-b border-gray-100">
+                        <td class="py-1.5 text-xs font-medium text-gray-900">${bill.bill_no}</td>
+                        <td class="py-1.5 text-xs text-gray-600">${bill.customer_name || 'Anonymous'}</td>
+                        <td class="py-1.5 text-xs text-gray-600">${bill.vehicle_number || bill.order_no || 'N/A'}</td>
+                        <td class="py-1.5 text-xs font-medium text-gray-900">NPR ${bill.total.toFixed(2)}</td>
+                        <td class="py-1.5">
+                            <span class="px-1.5 py-0.5 rounded-full text-xs font-medium ${bill.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'}">
+                                ${bill.status.toUpperCase()}
+                            </span>
+                        </td>
+                        <td class="py-1.5 text-xs text-gray-600">${bill.date}</td>
+                        <td class="py-1.5 flex space-x-2">
+                            <button class="edit-bill-btn text-blue-600 hover:text-blue-700 text-xs font-medium" data-id="${bill.id}">Edit</button>
+                            <button class="delete-bill-btn text-red-600 hover:text-red-700 text-xs font-medium" data-id="${bill.id}">Delete</button>
+                            <button class="view-bill-btn text-green-600 hover:text-green-700 text-xs font-medium" data-id="${bill.id}">View</button>
+                        </td>
+                    </tr>
+                `).join('');
+                const totalPages = Math.ceil(data.total / itemsPerPage);
+                document.getElementById('page-info').textContent = `Page ${page} of ${totalPages}`;
+                document.getElementById('prev-page').disabled = page === 1;
+                document.getElementById('next-page').disabled = page === totalPages;
+                document.querySelectorAll('.edit-bill-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const response = await fetch(`/pos/get_bill/?bill_id=${btn.dataset.id}`);
+                        const bill = await response.json();
+                        selectedBill = { id: bill.id, bill_no: bill.bill_no, order_no: bill.order_no };
+                        customerInfo = {
+                            id: bill.customer_id,
+                            name: bill.customer_name || 'Anonymous',
+                            phone: bill.customer_phone || '',
+                            vehicle: bill.vehicle_number || '',
+                            vehicle_id: bill.vehicle_id,
+                            order_no: bill.order_no
+                        };
+                        billItems = bill.items.map(item => ({
+                            id: item.id,
+                            name: item.name,
+                            price: parseFloat(item.price),
+                            quantity: item.quantity,
+                            image: item.image || (item.isService ? 'fa-tools' : 'fa-cogs'),
+                            isService: item.isService
+                        }));
+                        discountType = bill.discount_type;
+                        discount = parseFloat(bill.discount_value);
+                        customerCredit = bill.credit_amount > 0;
+                        creditAmount = parseFloat(bill.credit_amount);
+                        document.getElementById('discount-type').value = bill.discount_type;
+                        document.getElementById('discount').value = bill.discount_value;
+                        document.getElementById('customer-credit').checked = bill.credit_amount > 0;
+                        document.getElementById('credit-amount').value = bill.credit_amount;
+                        document.getElementById('credit-section').classList.toggle('hidden', !customerCredit);
+                        document.getElementById('credit-display').textContent = `-NPR ${creditAmount.toFixed(2)}`;
+                        document.querySelectorAll('[id^="payment-"]').forEach(b => {
+                            b.classList.remove('bg-blue-600', 'text-white');
+                            b.classList.add('bg-gray-100', 'text-gray-700');
+                        });
+                        document.getElementById(`payment-${bill.payment_mode}`).classList.remove('bg-gray-100', 'text-gray-700');
+                        document.getElementById(`payment-${bill.payment_mode}`).classList.add('bg-blue-600', 'text-white');
+                        renderCustomerInfo();
+                        renderBillItems();
+                        calculateBill();
+                        fetchPendingBills();
+                    });
+                });
+                document.querySelectorAll('.delete-bill-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        if (confirm('Are you sure you want to delete this bill?')) {
+                            const response = await fetch('/pos/delete_bill/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCsrfToken()
+                                },
+                                body: JSON.stringify({ bill_id: btn.dataset.id })
+                            });
+                            const data = await response.json();
+                            if (data.status === 'success') {
+                                fetchRecentBills(currentPage);
+                                if (selectedBill?.id === btn.dataset.id) {
+                                    clearBill();
+                                }
+                            } else {
+                                alert(data.message);
+                            }
+                        }
+                    });
+                });
+                document.querySelectorAll('.view-bill-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const response = await fetch(`/pos/get_bill/?bill_id=${btn.dataset.id}`);
+                        const bill = await response.json();
+                        renderBillPreview(bill);
+                    });
+                });
+            } catch (error) {
+                console.error('Error fetching recent bills:', error);
+                alert('Failed to load recent bills.');
+            }
+        }
+
+        async function fetchCustomerSearchResults(searchTerm) {
+            try {
+                const response = await fetch(`/search_customer/?q=${encodeURIComponent(searchTerm)}`);
+                const data = await response.json();
+                const resultsDiv = document.getElementById('customer-results');
+                resultsDiv.innerHTML = '';
+                if (!searchTerm) {
+                    resultsDiv.classList.add('hidden');
+                    return;
+                }
+                if (data.customers.length > 0) {
+                    resultsDiv.classList.remove('hidden');
+                    data.customers.forEach(c => {
+                        const resultItem = `
+                            <div class="p-1.5 bg-gray-50 rounded-md cursor-pointer hover:bg-gray-100 text-xs" data-customer-id="${c.id}">
+                                <p class="font-medium">${c.name}</p>
+                                <p class="text-gray-600">${c.phone}</p>
+                            </div>
+                        `;
+                        resultsDiv.insertAdjacentHTML('beforeend', resultItem);
+                    });
+                    document.querySelectorAll('#customer-results > div').forEach(item => {
+                        item.addEventListener('click', async () => {
+                            const response = await fetch(`/search_customer/?q=${encodeURIComponent(data.customers.find(c => c.id === item.dataset.customerId).phone)}`);
+                            const customer = (await response.json()).customers[0];
+                            customerInfo = { id: customer.id, name: customer.name, phone: customer.phone, vehicle: customer.vehicle || '', vehicle_id: customer.vehicle_id, order_no: customerInfo.order_no };
+                            document.getElementById('customer-name').value = customer.name;
+                            document.getElementById('customer-phone').value = customer.phone;
+                            document.getElementById('customer-vehicle').value = customer.vehicle || '';
+                            renderVisitHistory(customer);
+                            resultsDiv.classList.add('hidden');
+                            renderCustomerInfo();
+                        });
+                    });
+                } else {
+                    resultsDiv.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error fetching customer search results:', error);
+                alert('Failed to load customer search results.');
+            }
+        }
+
+        function renderBillPreview(bill) {
+    const previewContent = document.getElementById('bill-preview-content');
+    const subtotal = bill.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const discountAmount = bill.discount_type === 'percentage' ? (subtotal * bill.discount_value) / 100 : bill.discount_value;
+    previewContent.innerHTML = `
+        <div class="text-center mb-2">
+            <h3 class="text-sm font-semibold">${clientGarage.name}</h3>
+            <p class="text-xs">${clientGarage.address}</p>
+            ${clientGarage.contact ? `<p class="text-xs">${clientGarage.contact}</p>` : ''}
+            ${clientGarage.email ? `<p class="text-xs">${clientGarage.email}</p>` : ''}
+        </div>
+        <div class="flex flex-wrap gap-4 mb-2 text-xs">
+            <p><strong>Bill No:</strong> ${bill.bill_no}</p>
+            <p><strong>Date:</strong> ${bill.date}</p>
+            <p><strong>Customer:</strong> ${bill.customer_name || 'Anonymous'}</p>
+            ${bill.customer_phone ? `<p><strong>Phone:</strong> ${bill.customer_phone}</p>` : ''}
+            ${bill.vehicle_number ? `<p><strong>Vehicle:</strong> ${bill.vehicle_number}</p>` : ''}
+            ${bill.order_no ? `<p><strong>Order No:</strong> ${bill.order_no}</p>` : ''}
+        </div>
+        <table class="bill-preview-table mt-2">
+            <thead>
+                <tr>
+                    <th class="text-xs">Item</th>
+                    <th class="text-xs">Qty</th>
+                    <th class="text-xs">Price</th>
+                    <th class="text-xs">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${bill.items.map(item => `
+                    <tr>
+                        <td class="text-xs">${item.name}</td>
+                        <td class="text-xs">${item.quantity}</td>
+                        <td class="text-xs">NPR ${item.price.toFixed(2)}</td>
+                        <td class="text-xs">NPR ${(item.price * item.quantity).toFixed(2)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        <div class="flex flex-wrap gap-4 mt-2 text-xs">
+            <p><strong>Subtotal:</strong> NPR ${subtotal.toFixed(2)}</p>
+            <p><strong>Discount (${bill.discount_type}):</strong> NPR ${discountAmount.toFixed(2)}</p>
+            <p><strong>VAT (13%):</strong> NPR ${bill.tax.toFixed(2)}</p>
+            ${bill.credit_amount > 0 ? `<p><strong>Credit:</strong> NPR ${bill.credit_amount.toFixed(2)}</p>` : ''}
+            <p class="font-semibold"><strong>Total:</strong> NPR ${bill.total.toFixed(2)}</p>
+            <p><strong>Payment Mode:</strong> ${bill.payment_mode.toUpperCase()}</p>
+        </div>
+    `;
+    document.getElementById('bill-preview-modal').classList.remove('hidden');
+    document.getElementById('print-bill-btn').onclick = () => window.location.href = `/pos/generate_bill_pdf/?bill_id=${bill.id}`;
+    document.getElementById('whatsapp-bill-btn').onclick = () => {
+        if (bill.customer_phone) {
+            window.open(`https://wa.me/${bill.customer_phone}?text=Here%20is%20your%20bill%20${bill.bill_no}%20from%20${encodeURIComponent(clientGarage.name)}.%20Total:%20NPR%20${bill.total.toFixed(2)}.%20View%20PDF:%20${window.location.origin}/pos/generate_bill_pdf/?bill_id=${bill.id}`, '_blank');
+        } else {
+            document.getElementById('phone-prompt-modal').classList.remove('hidden');
+            document.getElementById('whatsapp-phone').value = bill.customer_phone || '';
+            document.getElementById('save-phone-btn').onclick = async () => {
+                const phone = document.getElementById('whatsapp-phone').value;
+                if (phone) {
+                    const response = await fetch('/pos/save_customer/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            name: bill.customer_name || 'Anonymous',
+                            phone,
+                            vehicle: bill.vehicle_number || ''
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.status === 'success') {
+                        window.open(`https://wa.me/${phone}?text=Here%20is%20your%20bill%20${bill.bill_no}%20from%20${encodeURIComponent(clientGarage.name)}.%20Total:%20NPR%20${bill.total.toFixed(2)}.%20View%20PDF:%20${window.location.origin}/pos/generate_bill_pdf/?bill_id=${bill.id}`, '_blank');
+                        document.getElementById('phone-prompt-modal').classList.add('hidden');
+                    } else {
+                        alert(data.message);
+                    }
+                } else {
+                    alert('Please enter a phone number.');
+                }
+            };
+        }
+    };
+}
+
+        function clearBill() {
+            billItems = [];
+            customerInfo = { id: null, name: '', phone: '', vehicle: '', vehicle_id: null, order_no: null };
+            selectedBill = null;
+            discount = 0;
+            discountType = 'percentage';
+            customerCredit = false;
+            creditAmount = 0;
+            paymentMode = 'cash';
+            document.getElementById('discount-type').value = 'percentage';
+            document.getElementById('discount').value = 0;
+            document.getElementById('customer-credit').checked = false;
+            document.getElementById('credit-amount').value = 0;
+            document.getElementById('credit-section').classList.add('hidden');
+            document.getElementById('credit-display').textContent = 'NPR 0.00';
+            document.querySelectorAll('[id^="payment-"]').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                b.classList.add('bg-gray-100', 'text-gray-700');
+            });
+            document.getElementById('payment-cash').classList.remove('bg-gray-100', 'text-gray-700');
+            document.getElementById('payment-cash').classList.add('bg-blue-600', 'text-white');
+            renderCustomerInfo();
+            renderBillItems();
+            calculateBill();
+            fetchPendingBills();
+        }
+
+        // Event Listeners
+        document.getElementById('global-search').addEventListener('input', e => {
+            fetchPendingBills(e.target.value);
+            fetchRecentBills(1);
+        });
+
+        document.getElementById('item-search').addEventListener('input', e => fetchItems(e.target.value));
+
+        document.getElementById('edit-customer-btn').addEventListener('click', () => {
+            document.getElementById('customer-modal').classList.remove('hidden');
+            document.getElementById('customer-name').value = customerInfo.name;
+            document.getElementById('customer-phone').value = customerInfo.phone;
+            document.getElementById('customer-vehicle').value = customerInfo.vehicle;
+            if (customerInfo.phone) {
+                fetchCustomerSearchResults(customerInfo.phone);
+            }
+        });
+
+        document.getElementById('close-customer-modal').addEventListener('click', () => {
+            document.getElementById('customer-modal').classList.add('hidden');
+            document.getElementById('customer-results').classList.add('hidden');
+        });
+
+        document.getElementById('cancel-customer-btn').addEventListener('click', () => {
+            document.getElementById('customer-modal').classList.add('hidden');
+            document.getElementById('customer-results').classList.add('hidden');
+        });
+
+        document.getElementById('save-customer-btn').addEventListener('click', async () => {
+            const name = document.getElementById('customer-name').value;
+            const phone = document.getElementById('customer-phone').value;
+            const vehicle = document.getElementById('customer-vehicle').value;
+            const response = await fetch('/pos/save_customer/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({ name, phone, vehicle })
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                customerInfo = {
+                    id: data.customer.id,
+                    name: data.customer.name,
+                    phone: data.customer.phone,
+                    vehicle: data.customer.vehicle,
+                    vehicle_id: data.customer.vehicle_id,
+                    order_no: customerInfo.order_no
+                };
+                renderCustomerInfo();
+                document.getElementById('customer-modal').classList.add('hidden');
+            } else {
+                alert(data.message);
+            }
+        });
+
+        document.getElementById('customer-search').addEventListener('input', e => fetchCustomerSearchResults(e.target.value));
+
+        document.getElementById('discount-type').addEventListener('change', e => {
+            discountType = e.target.value;
+            calculateBill();
+        });
+
+        document.getElementById('discount').addEventListener('input', e => {
+            discount = parseFloat(e.target.value) || 0;
+            calculateBill();
+        });
+
+        document.getElementById('customer-credit').addEventListener('change', e => {
+            customerCredit = e.target.checked;
+            document.getElementById('credit-section').classList.toggle('hidden', !customerCredit);
+            calculateBill();
+        });
+
+        document.getElementById('credit-amount').addEventListener('input', e => {
+            creditAmount = parseFloat(e.target.value) || 0;
+            document.getElementById('credit-display').textContent = `-NPR ${creditAmount.toFixed(2)}`;
+            calculateBill();
+        });
+
+        document.querySelectorAll('[id^="payment-"]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                paymentMode = btn.id.replace('payment-', '');
+                document.querySelectorAll('[id^="payment-"]').forEach(b => {
+                    b.classList.remove('bg-blue-600', 'text-white');
+                    b.classList.add('bg-gray-100', 'text-gray-700');
+                });
+                btn.classList.remove('bg-gray-100', 'text-gray-700');
+                btn.classList.add('bg-blue-600', 'text-white');
+            });
+        });
+
+        document.getElementById('save-pending-btn').addEventListener('click', async () => {
+            const billData = {
+                bill_id: selectedBill?.id,
+                customer_id: customerInfo.id,
+                vehicle_id: customerInfo.vehicle_id,
+                order_no: customerInfo.order_no,
+                items: billItems,
+                total: calculateBill().finalAmount,
+                status: 'Pending',
+                discount: { type: discountType, value: discount },
+                credit: customerCredit ? creditAmount : 0,
+                payment_mode: paymentMode
+            };
+            const response = await fetch('/pos/save_bill/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(billData)
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                selectedBill = { id: data.bill_id };
+                fetchPendingBills();
+                fetchRecentBills(currentPage);
+                alert('Bill saved as pending.');
+            } else {
+                alert(data.message);
+            }
+        });
+
+        document.getElementById('generate-bill-btn').addEventListener('click', async () => {
+            const billData = {
+                bill_id: selectedBill?.id,
+                customer_id: customerInfo.id,
+                vehicle_id: customerInfo.vehicle_id,
+                order_no: customerInfo.order_no,
+                items: billItems,
+                total: calculateBill().finalAmount,
+                status: 'Completed',
+                discount: { type: discountType, value: discount },
+                credit: customerCredit ? creditAmount : 0,
+                payment_mode: paymentMode
+            };
+            const response = await fetch('/pos/generate_bill/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(billData)
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                clearBill();
+                fetchPendingBills();
+                fetchRecentBills(currentPage);
+                renderBillPreview(data.bill);
+            } else {
+                alert(data.message);
+            }
+        });
+
+        document.getElementById('print-btn').addEventListener('click', () => {
+            if (selectedBill?.id) {
+                window.location.href = `/pos/generate_bill_pdf/?bill_id=${selectedBill.id}`;
+            } else {
+                alert('Please save or generate the bill first.');
+            }
+        });
+
+        document.getElementById('whatsapp-btn').addEventListener('click', () => {
+            if (selectedBill?.id) {
+                if (customerInfo.phone) {
+                    window.open(`https://wa.me/${customerInfo.phone}?text=Here%20is%20your%20bill%20${selectedBill.bill_no}%20from%20${encodeURIComponent(clientGarage.name)}.%20Total:%20NPR%20${calculateBill().finalAmount.toFixed(2)}.%20View%20PDF:%20${window.location.origin}/pos/generate_bill_pdf/?bill_id=${selectedBill.id}`, '_blank');
+                } else {
+                    document.getElementById('phone-prompt-modal').classList.remove('hidden');
+                    document.getElementById('whatsapp-phone').value = customerInfo.phone || '';
+                }
+            } else {
+                alert('Please save or generate the bill first.');
+            }
+        });
+
+        document.getElementById('close-bill-preview').addEventListener('click', () => {
+            document.getElementById('bill-preview-modal').classList.add('hidden');
+        });
+
+        document.getElementById('close-phone-prompt').addEventListener('click', () => {
+            document.getElementById('phone-prompt-modal').classList.add('hidden');
+        });
+
+        document.getElementById('cancel-phone-btn').addEventListener('click', () => {
+            document.getElementById('phone-prompt-modal').classList.add('hidden');
+        });
+
+        document.getElementById('save-phone-btn').addEventListener('click', async () => {
+            const phone = document.getElementById('whatsapp-phone').value;
+            if (phone) {
+                const response = await fetch('/pos/save_customer/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        name: customerInfo.name || 'Anonymous',
+                        phone,
+                        vehicle: customerInfo.vehicle || ''
+                    })
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    customerInfo = { ...customerInfo, phone: data.customer.phone, id: data.customer.id };
+                    renderCustomerInfo();
+                    document.getElementById('phone-prompt-modal').classList.add('hidden');
+                    if (selectedBill?.id) {
+                        window.open(`https://wa.me/${phone}?text=Here%20is%20your%20bill%20${selectedBill.bill_no}%20from%20${encodeURIComponent(clientGarage.name)}.%20Total:%20NPR%20${calculateBill().finalAmount.toFixed(2)}.%20View%20PDF:%20${window.location.origin}/pos/generate_bill_pdf/?bill_id=${selectedBill.id}`, '_blank');
+                    }
+                } else {
+                    alert(data.message);
+                }
+            } else {
+                alert('Please enter a phone number.');
+            }
+        });
+
+        document.getElementById('clear-bill-btn').addEventListener('click', clearBill);
+
+        document.getElementById('prev-page').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchRecentBills(currentPage);
+            }
+        });
+
+        document.getElementById('next-page').addEventListener('click', () => {
+            currentPage++;
+            fetchRecentBills(currentPage);
+        });
+
+        // Initial fetches
+        fetchPendingBills();
+        fetchItems();
+        fetchRecentBills(currentPage);
+    </script>
+</body>
+</html>
+{% endblock %}

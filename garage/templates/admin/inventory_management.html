@@ -1,0 +1,1574 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Supplier Management - Garage POS{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+    <title>Supplier Management - Garage POS</title>
+</head>
+<body class="bg-gray-100">
+    <div class="p-3 sm:p-4 space-y-3 max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 space-y-2 sm:space-y-0">
+            <div>
+                <h1 class="text-lg font-bold text-gray-900">Inventory & Supplier Management</h1>
+                <p class="text-xs text-gray-600">Manage suppliers, purchase orders, and inventory stock</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-2 mb-3">
+            <button id="add-supplier-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                <i class="fas fa-plus w-3 h-3"></i>
+                <span>Add Supplier</span>
+            </button>
+            <button id="new-purchase-btn" class="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                <i class="fas fa-box w-3 h-3"></i>
+                <span>New Purchase</span>
+            </button>
+            <button id="add-stock-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1 hidden">
+                <i class="fas fa-plus w-3 h-3"></i>
+                <span>Add Stock</span>
+            </button>
+            <button class="bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
+                <i class="fas fa-upload w-3 h-3"></i>
+                <span>Bulk Upload</span>
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 mb-3">
+            <div class="flex space-x-1">
+                <button id="suppliers-tab" class="tab-btn flex-1 py-1 px-2 text-xs font-medium text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 hover:text-blue-800 transition-colors duration-200 active">
+                    Suppliers
+                </button>
+                <button id="inventory-tab" class="tab-btn flex-1 py-1 px-2 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-blue-200 hover:text-blue-800 transition-colors duration-200">
+                    Inventory
+                </button>
+            </div>
+        </div>
+
+        <!-- Suppliers Tab Content -->
+        <div id="suppliers-content" class="tab-content">
+            <!-- Search -->
+            <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 mb-3">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3"></i>
+                    <input
+                        type="text"
+                        id="supplier-search"
+                        placeholder="Search suppliers by name, category, or contact..."
+                        class="w-full pl-7 pr-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                </div>
+            </div>
+
+            <!-- Supplier Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-3">
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 text-center">
+                    <div class="text-lg font-bold text-blue-600" id="total-suppliers">0</div>
+                    <div class="text-xs text-gray-600">Total Suppliers</div>
+                </div>
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 text-center">
+                    <div class="text-lg font-bold text-green-600" id="active-suppliers">0</div>
+                    <div class="text-xs text-gray-600">Active Suppliers</div>
+                </div>
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 text-center">
+                    <div class="text-lg font-bold text-orange-600" id="total-credit">NPR 0</div>
+                    <div class="text-xs text-gray-600">Total Credit Outstanding</div>
+                </div>
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 text-center">
+                    <div class="text-lg font-bold text-purple-600" id="pending-payments">0</div>
+                    <div class="text-xs text-gray-600">Pending Payments</div>
+                </div>
+            </div>
+
+            <!-- Suppliers Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-2 mb-3" id="suppliers-grid"></div>
+            <div class="flex justify-center mt-3">
+                <nav id="suppliers-pagination" class="inline-flex space-x-1">
+                    <!-- Pagination buttons will be added dynamically -->
+                </nav>
+            </div>
+
+            <!-- Recent Purchase Orders -->
+            <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
+                <h2 class="text-sm font-semibold text-gray-900 mb-2">Recent Purchase Orders</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">PO Number</th>
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">Supplier</th>
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">Date</th>
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">Amount</th>
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">Payment</th>
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">Status</th>
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">Due Date</th>
+                                <th class="text-left py-1.5 text-xs font-medium text-gray-500">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchase-orders"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-center mt-3">
+                    <nav id="purchase-orders-pagination" class="inline-flex space-x-1">
+                        <!-- Pagination buttons will be added dynamically -->
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Tab Content -->
+        <div id="inventory-content" class="tab-content hidden">
+            <!-- Low Stock Alert -->
+            <div id="low-stock-alert" class="hidden bg-yellow-50 border border-yellow-200 rounded-md p-2 mb-3">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle w-4 h-4 text-yellow-600 mr-2"></i>
+                    <h3 class="text-xs font-medium text-yellow-800" id="low-stock-count"></h3>
+                </div>
+                <div class="mt-1 text-xs text-yellow-700" id="low-stock-items"></div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2 mb-3">
+                <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3"></i>
+                        <input
+                            type="text"
+                            id="inventory-search"
+                            placeholder="Search by part name, code, or category..."
+                            class="w-full pl-7 pr-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                    </div>
+                    <select id="category-filter" class="border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="all">All Categories</option>
+                        {% for category in part_categories %}
+                            <option value="{{ category.name }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <button id="filter-inventory-btn" class="flex items-center space-x-1 px-2 py-1 border border-gray-300 rounded-md text-xs hover:bg-gray-50">
+                        <i class="fas fa-filter w-3 h-3"></i>
+                        <span>Filter</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Inventory Stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 mb-3">
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-box w-6 h-6 text-blue-600 mr-2"></i>
+                        <div>
+                            <p class="text-xs text-gray-600">Total Items</p>
+                            <p class="text-lg font-bold text-gray-900" id="total-items">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-exclamation-triangle w-6 h-6 text-yellow-600 mr-2"></i>
+                        <div>
+                            <p class="text-xs text-gray-600">Low Stock</p>
+                            <p class="text-lg font-bold text-gray-900" id="low-stock">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-times-circle w-6 h-6 text-red-600 mr-2"></i>
+                        <div>
+                            <p class="text-xs text-gray-600">Out of Stock</p>
+                            <p class="text-lg font-bold text-gray-900" id="out-of-stock">0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-md shadow-sm border border-gray-200 p-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-money-bill w-6 h-6 text-green-600 mr-2"></i>
+                        <div>
+                            <p class="text-xs text-gray-600">Total Value</p>
+                            <p class="text-lg font-bold text-gray-900" id="total-value">NPR 0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Table -->
+            <div class="bg-white rounded-md shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Part Details</th>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Category</th>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Vehicle Compatibility</th>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Stock</th>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Prices</th>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Status</th>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Last Movement</th>
+                                <th class="px-4 py-1.5 text-left text-xs font-medium text-gray-500">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table" class="divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <div class="flex justify-center mt-3">
+                    <nav id="inventory-pagination" class="inline-flex space-x-1">
+                        <!-- Pagination buttons will be added dynamically -->
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Supplier Modal -->
+        <div id="add-supplier-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900" id="supplier-modal-title">Add New Supplier</h2>
+                    <button id="close-supplier-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div class="space-y-2">
+                        <h3 class="text-xs font-medium text-gray-900">Basic Information</h3>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Supplier Name *</label>
+                            <input
+                                type="text"
+                                id="supplier-name"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter supplier name"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Contact Person</label>
+                            <input
+                                type="text"
+                                id="contact-person"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Contact person name"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Phone Number *</label>
+                            <input
+                                type="tel"
+                                id="supplier-phone"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="+977 XXXXX XXXXX"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                            <input
+                                type="email"
+                                id="supplier-email"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="supplier@email.com"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Address</label>
+                            <textarea
+                                id="supplier-address"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                rows="3"
+                                placeholder="Complete address"
+                            ></textarea>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <h3 class="text-xs font-medium text-gray-900">Business Details</h3>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">VAT Number</label>
+                            <input
+                                type="text"
+                                id="supplier-vat"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="VAT123456789"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                            <select id="supplier-category" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Select category</option>
+                                <option value="lubricants">Lubricants</option>
+                                <option value="spare-parts">Spare Parts</option>
+                                <option value="drive-train">Drive Train</option>
+                                <option value="electrical">Electrical</option>
+                                <option value="tools">Tools & Equipment</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Credit Limit (NPR)</label>
+                            <input
+                                type="number"
+                                id="credit-limit"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="50000"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Payment Terms</label>
+                            <select id="payment-terms" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="immediate">Immediate</option>
+                                <option value="7-days">7 Days</option>
+                                <option value="15-days">15 Days</option>
+                                <option value="30-days">30 Days</option>
+                                <option value="45-days">45 Days</option>
+                                <option value="60-days">60 Days</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="cancel-supplier-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="save-supplier-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Add Supplier
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Purchase Order Modal -->
+        <div id="purchase-order-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900" id="purchase-order-title">New Purchase Order</h2>
+                    <button id="close-purchase-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
+                    <!-- Supplier Details (unchanged) -->
+                    <div class="space-y-2">
+                        <h3 class="text-xs font-medium text-gray-900">Supplier Details</h3>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Select Supplier *</label>
+                            <select id="purchase-supplier" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Choose supplier</option>
+                            </select>
+                        </div>
+                        <div id="supplier-details" class="hidden bg-blue-50 rounded-md p-2 text-xs">
+                            <p id="credit-available" class="text-blue-800"></p>
+                            <p id="payment-terms-display" class="text-blue-800"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Payment Mode *</label>
+                            <select id="payment-mode" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="cash">Cash Payment</option>
+                                <option value="credit">Credit Purchase</option>
+                                <option value="advance">Advance Payment</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Purchase Items -->
+                    <div class="lg:col-span-2 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-medium text-gray-900">Purchase Items</h3>
+                            <button id="add-purchase-item" class="bg-green-600 hover:bg-green-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center space-x-1">
+                                <i class="fas fa-plus w-3 h-3"></i>
+                                <span>Add Item</span>
+                            </button>
+                        </div>
+                        <div class="border border-gray-200 rounded-md overflow-hidden">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Item Name</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Vehicle Compatibility</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Quantity</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Purchase Rate</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Selling Price</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Amount</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="purchase-items"></tbody>
+                            </table>
+                        </div>
+                        <div class="bg-gray-50 rounded-md p-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs text-gray-600">Subtotal:</span>
+                                <span id="purchase-subtotal" class="font-medium text-xs">NPR 0</span>
+                            </div>
+                            <div id="vat-row" class="flex justify-between items-center mb-1">
+                                <span class="text-xs text-gray-600">VAT (<span id="vat-rate">0</span>%):</span>
+                                <span id="purchase-tax" class="font-medium text-xs">NPR 0</span>
+                            </div>
+                            <div class="flex justify-between items-center border-t pt-1">
+                                <span class="text-xs font-semibold">Total:</span>
+                                <span id="purchase-total" class="text-xs font-bold text-blue-600">NPR 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="cancel-purchase-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="create-purchase-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200" disabled>
+                        Create Purchase Order
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Add Stock Modal -->
+        <div id="add-stock-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900" id="stock-modal-title">Add New Stock Item</h2>
+                    <button id="close-stock-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 space-y-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Part Code *</label>
+                        <input
+                            type="text"
+                            id="stock-code"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., EO001"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Part Name *</label>
+                        <input
+                            type="text"
+                            id="stock-name"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., Engine Oil 20W-50"
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Category *</label>
+                        <select id="stock-category" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select category</option>
+                            {% for category in part_categories %}
+                                <option value="{{ category.name }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Company</label>
+                        <select id="stock-vehicle-company" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select company</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Type</label>
+                        <select id="stock-vehicle-type" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select type</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Model</label>
+                        <select id="stock-vehicle-model" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select model</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Quantity *</label>
+                            <input
+                                type="number"
+                                id="stock-quantity"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                                min="0"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Min Stock</label>
+                            <input
+                                type="number"
+                                id="stock-min"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0"
+                                min="0"
+                            />
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Purchase Price (NPR) *</label>
+                            <input
+                                type="number"
+                                id="stock-purchase-price"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                            />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Selling Price (NPR) *</label>
+                            <input
+                                type="number"
+                                id="stock-selling-price"
+                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Supplier</label>
+                        <input
+                            type="text"
+                            id="stock-supplier"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Supplier name"
+                        />
+                    </div>
+                </div>
+                <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="cancel-stock-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="save-stock-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Add Item
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supplier Payment Modal -->
+        <div id="supplier-payment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-md w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900">Make Payment</h2>
+                    <button id="close-payment-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 space-y-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Supplier</label>
+                        <input
+                            type="text"
+                            id="payment-supplier-name"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            readonly
+                        />
+                        <input type="hidden" id="payment-supplier-id" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Current Credit (NPR)</label>
+                        <input
+                            type="text"
+                            id="payment-current-credit"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            readonly
+                        />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Purchase Order (Optional)</label>
+                        <select id="payment-purchase-order" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select purchase order</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Payment Amount (NPR) *</label>
+                        <input
+                            type="number"
+                            id="payment-amount"
+                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="0.00"
+                            step="0.01"
+                            min="0"
+                        />
+                    </div>
+                </div>
+                <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="cancel-payment-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Cancel
+                    </button>
+                    <button id="make-payment-btn" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Make Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  <script>
+let selectedSupplier = null;
+let purchaseItems = [];
+let currentSupplierPage = 1;
+let currentInventoryPage = 1;
+let currentPurchasePage = 1;
+let vehicleData = { companies: [], types: [], models: [] };
+let taxSettings = { tax_rate: 13, include_in_bill: true };
+
+// Helper function to show Toastify notifications
+function showToast(message, type = 'success') {
+    Toastify({
+        text: message,
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        backgroundColor: type === 'success' ? "#10B981" : "#EF4444",
+        stopOnFocus: true,
+    }).showToast();
+}
+
+// Fetch tax settings
+async function fetchTaxSettings() {
+    try {
+        const response = await fetch('/admin/get-tax-settings/', {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        if (!response.ok) throw new Error('Failed to fetch tax settings');
+        return await response.json();
+    } catch (error) {
+        showToast('Error fetching tax settings: ' + error.message, 'error');
+        return { tax_rate: 13, include_in_bill: true };
+    }
+}
+
+// Fetch vehicle data
+async function fetchVehicleData() {
+    try {
+        const companiesResponse = await fetch('/admin/get-vehicle-companies/', { headers: { 'X-CSRFToken': getCsrfToken() } }).then(res => res.json());
+        const typesResponse = await fetch('/admin/get-vehicle-types_a/', { headers: { 'X-CSRFToken': getCsrfToken() } }).then(res => res.json());
+        const modelsResponse = await fetch('/admin/get-vehicle-models_a/', { headers: { 'X-CSRFToken': getCsrfToken() } }).then(res => res.json());
+        
+        const companies = Array.isArray(companiesResponse) ? companiesResponse : [];
+        const types = Array.isArray(typesResponse) ? typesResponse : [];
+        const models = Array.isArray(modelsResponse.models) ? modelsResponse.models : [];
+        
+        console.log('Fetched vehicle data:', { companies, types, models });
+        if (types.length === 0) {
+            console.warn('No vehicle types returned. Check /admin/get-vehicle-types_a/ endpoint.');
+        }
+        return { companies, types, models };
+    } catch (error) {
+        showToast('Error fetching vehicle data: ' + error.message, 'error');
+        console.error('Error in fetchVehicleData:', error);
+        return { companies: [], types: [], models: [] };
+    }
+}
+
+// Update model dropdown for Add Stock modal
+async function updateModelDropdown(companyName, typeName, modelSelect) {
+    try {
+        const companyId = vehicleData.companies.find(c => c.name === companyName)?.id || '';
+        const typeId = vehicleData.types.find(t => t.name === typeName)?.id || '';
+        const response = await fetch(`/admin/get-vehicle-models/?company_id=${companyId}&type_id=${typeId}`, {
+            headers: { 'X-CSRFToken': getCsrfToken() }
+        });
+        const data = await response.json();
+        console.log('Fetched models for company:', companyName, 'type:', typeName, 'data:', data);
+        modelSelect.innerHTML = '<option value="">Select model</option>' + 
+            data.models.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+    } catch (error) {
+        showToast('Error fetching vehicle models: ' + error.message, 'error');
+        console.error('Error updating model dropdown:', error);
+        modelSelect.innerHTML = '<option value="">Select model</option>';
+    }
+}
+
+// Render purchase items
+function renderPurchaseItems() {
+    const table = document.getElementById('purchase-items');
+    table.innerHTML = purchaseItems.map((item, index) => `
+        <tr class="border-b border-gray-200">
+            <td class="px-3 py-1">
+                <input type="text" class="item-name w-full border border-gray-300 rounded-md px-2 py-1 text-xs" value="${item.name}" placeholder="Search or enter item..." data-index="${index}" />
+            </td>
+            <td class="px-3 py-1">
+                <select class="item-vehicle-company w-full border border-gray-300 rounded-md px-2 py-1 text-xs mt-1" data-index="${index}">
+                    <option value="">Select company</option>
+                    ${vehicleData.companies.map(c => `<option value="${c.name}" ${item.vehicle_company === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
+                </select>
+                <select class="item-vehicle-type w-full border border-gray-300 rounded-md px-2 py-1 text-xs mt-1" data-index="${index}">
+                    <option value="">Select type</option>
+                    ${vehicleData.types.map(t => `<option value="${t.name}" ${item.vehicle_type === t.name ? 'selected' : ''}>${t.name}</option>`).join('')}
+                </select>
+                <select class="item-vehicle-model w-full border border-gray-300 rounded-md px-2 py-1 text-xs mt-1" data-index="${index}">
+                    <option value="">Select model</option>
+                    ${item.vehicle_company && item.vehicle_type ? 
+                        vehicleData.models.filter(m => 
+                            (!item.vehicle_company || m.company_id === vehicleData.companies.find(c => c.name === item.vehicle_company)?.id) &&
+                            (!item.vehicle_type || m.vehicle_type_id === vehicleData.types.find(t => t.name === item.vehicle_type)?.id)
+                        ).map(m => `<option value="${m.name}" ${item.vehicle_model === m.name ? 'selected' : ''}>${m.name}</option>`).join('') : 
+                        ''}
+                </select>
+            </td>
+            <td class="px-3 py-1">
+                <input type="number" class="item-quantity w-full border border-gray-300 rounded-md px-2 py-1 text-xs" value="${item.quantity}" min="1" data-index="${index}" />
+            </td>
+            <td class="px-3 py-1">
+                <input type="number" class="item-rate w-full border border-gray-300 rounded-md px-2 py-1 text-xs" value="${item.rate}" step="0.01" min="0" data-index="${index}" />
+            </td>
+            <td class="px-3 py-1">
+                <input type="number" class="item-selling-price w-full border border-gray-300 rounded-md px-2 py-1 text-xs" value="${item.sellingPrice}" step="0.01" min="0" data-index="${index}" />
+            </td>
+            <td class="px-3 py-1 text-xs text-gray-600">NPR ${(item.quantity * item.rate).toLocaleString()}</td>
+            <td class="px-3 py-1">
+                <button class="remove-item-btn text-red-600 hover:text-red-700 text-xs" data-index="${index}">
+                    <i class="fas fa-trash w-3 h-3"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    // Initialize autocomplete for item names
+    document.querySelectorAll('.item-name').forEach(input => {
+        $(input).autocomplete({
+            source: async function(request, response) {
+                try {
+                    const res = await fetch(`/admin/search-items/?term=${request.term}`, {
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    });
+                    const data = await res.json();
+                    response(data.length > 0 ? data : [{ label: request.term, value: request.term, isNew: true }]);
+                } catch (error) {
+                    showToast('Error searching items: ' + error.message, 'error');
+                    console.error('Error in autocomplete:', error);
+                    response([{ label: request.term, value: request.term, isNew: true }]);
+                }
+            },
+            minLength: 2,
+            select: function(event, ui) {
+                const index = parseInt(event.target.dataset.index);
+                purchaseItems[index] = {
+                    ...purchaseItems[index],
+                    name: ui.item.label,
+                    code: ui.item.code || '',
+                    rate: ui.item.purchasePrice || 0,
+                    sellingPrice: ui.item.sellingPrice || 0,
+                    vehicle_company: ui.item.vehicle_company || '',
+                    vehicle_type: ui.item.vehicle_type || '',
+                    vehicle_model: ui.item.vehicle_model || ''
+                };
+                renderPurchaseItems();
+                calculatePurchaseTotal();
+            },
+            change: function(event, ui) {
+                const index = parseInt(event.target.dataset.index);
+                if (!ui.item) {
+                    purchaseItems[index].name = event.target.value;
+                }
+            }
+        });
+    });
+
+    // Update purchase items on input change
+    document.querySelectorAll('.item-name').forEach(input => {
+        input.addEventListener('input', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            purchaseItems[index].name = e.target.value;
+        });
+    });
+
+    // Dynamic updates for company and type
+    document.querySelectorAll('.item-vehicle-company').forEach(input => {
+        input.addEventListener('change', async (e) => {
+            const index = parseInt(e.target.dataset.index);
+            const companyName = e.target.value;
+            purchaseItems[index].vehicle_company = companyName;
+            purchaseItems[index].vehicle_model = ''; // Reset model
+            try {
+                const companyId = vehicleData.companies.find(c => c.name === companyName)?.id || '';
+                const typeId = vehicleData.types.find(t => t.name === purchaseItems[index].vehicle_type)?.id || '';
+                const response = await fetch(`/admin/get-vehicle-models/?company_id=${companyId}&type_id=${typeId}`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+                console.log('Fetched models for purchase item:', { companyName, type: purchaseItems[index].vehicle_type, models: data.models });
+                vehicleData.models = data.models; // Update models
+                renderPurchaseItems();
+                calculatePurchaseTotal();
+            } catch (error) {
+                showToast('Error fetching vehicle models: ' + error.message, 'error');
+                console.error('Error updating models for company:', error);
+            }
+        });
+    });
+
+    document.querySelectorAll('.item-vehicle-type').forEach(input => {
+        input.addEventListener('change', async (e) => {
+            const index = parseInt(e.target.dataset.index);
+            const companyName = purchaseItems[index].vehicle_company;
+            const typeName = e.target.value;
+            purchaseItems[index].vehicle_type = typeName;
+            purchaseItems[index].vehicle_model = ''; // Reset model
+            try {
+                const companyId = vehicleData.companies.find(c => c.name === companyName)?.id || '';
+                const typeId = vehicleData.types.find(t => t.name === typeName)?.id || '';
+                const response = await fetch(`/admin/get-vehicle-models/?company_id=${companyId}&type_id=${typeId}`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                const data = await response.json();
+                console.log('Fetched models for purchase item:', { companyName, typeName, models: data.models });
+                vehicleData.models = data.models; // Update models
+                renderPurchaseItems();
+                calculatePurchaseTotal();
+            } catch (error) {
+                showToast('Error fetching vehicle models: ' + error.message, 'error');
+                console.error('Error updating models for type:', error);
+            }
+        });
+    });
+
+    document.querySelectorAll('.item-vehicle-model, .item-quantity, .item-rate, .item-selling-price').forEach(input => {
+        input.addEventListener('change', (e) => {
+            const index = parseInt(e.target.dataset.index);
+            const field = e.target.classList.contains('item-quantity') ? 'quantity' :
+                         e.target.classList.contains('item-rate') ? 'rate' :
+                         e.target.classList.contains('item-selling-price') ? 'sellingPrice' :
+                         'vehicle_model';
+            purchaseItems[index][field] = field === 'vehicle_model' ? e.target.value : parseFloat(e.target.value) || (field === 'quantity' ? 1 : 0);
+            renderPurchaseItems();
+            calculatePurchaseTotal();
+        });
+    });
+
+    // Remove item
+    document.querySelectorAll('.remove-item-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            purchaseItems.splice(parseInt(btn.dataset.index), 1);
+            renderPurchaseItems();
+            calculatePurchaseTotal();
+        });
+    });
+}
+
+// Helper functions (unchanged)
+function getStatusColor(status) {
+    switch (status) {
+        case 'active':
+        case 'in-stock': return 'bg-green-100 text-green-800';
+        case 'low-stock': return 'bg-yellow-100 text-yellow-800';
+        case 'partially_paid': return 'bg-orange-100 text-orange-800';
+        case 'out-of-stock':
+        case 'inactive': return 'bg-gray-100 text-gray-800';
+        case 'pending': return 'bg-blue-100 text-blue-800';
+        case 'paid': return 'bg-green-100 text-green-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
+}
+
+function getMovementIcon(movement) {
+    switch (movement) {
+        case 'sold': return '<i class="fas fa-arrow-down w-3 h-3 text-red-500"></i>';
+        case 'used': return '<i class="fas fa-minus w-3 h-3 text-orange-500"></i>';
+        case 'added':
+        case 'updated': return '<i class="fas fa-arrow-up w-3 h-3 text-green-500"></i>';
+        default: return '<i class="fas fa-box w-3 h-3 text-gray-500"></i>';
+    }
+}
+
+function getCreditUtilization(current, limit) {
+    return Math.round((current / limit) * 100);
+}
+
+function calculatePurchaseTotal() {
+    const subtotal = purchaseItems.reduce((sum, item) => sum + (item.rate * item.quantity), 0);
+    const tax = taxSettings.include_in_bill ? subtotal * (taxSettings.tax_rate / 100) : 0;
+    const total = subtotal + tax;
+    document.getElementById('purchase-subtotal').textContent = `NPR ${subtotal.toFixed(2)}`;
+    document.getElementById('vat-rate').textContent = taxSettings.include_in_bill ? taxSettings.tax_rate : 0;
+    document.getElementById('purchase-tax').textContent = `NPR ${tax.toFixed(2)}`;
+    document.getElementById('purchase-total').textContent = `NPR ${total.toFixed(2)}`;
+    document.getElementById('create-purchase-btn').disabled = purchaseItems.length === 0 || !selectedSupplier;
+    return total;
+}
+
+function renderPagination(containerId, currentPage, totalPages) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const prevButton = document.createElement('button');
+    prevButton.className = `px-2 py-1 text-xs font-medium ${currentPage === 1 ? 'text-gray-400' : 'text-blue-600 hover:text-blue-700'}`;
+    prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevButton.disabled = currentPage === 1;
+    prevButton.onclick = () => changePage(containerId.split('-')[0], currentPage - 1);
+    container.appendChild(prevButton);
+
+    for (let i = 1; i <= totalPages; i++) {
+        const button = document.createElement('button');
+        button.className = `px-2 py-1 text-xs font-medium ${i === currentPage ? 'bg-blue-600 text-white' : 'text-blue-600 hover:text-blue-700'}`;
+        button.textContent = i;
+        button.onclick = () => changePage(containerId.split('-')[0], i);
+        container.appendChild(button);
+    }
+
+    const nextButton = document.createElement('button');
+    nextButton.className = `px-2 py-1 text-xs font-medium ${currentPage === totalPages ? 'text-gray-400' : 'text-blue-600 hover:text-blue-700'}`;
+    nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.onclick = () => changePage(containerId.split('-')[0], currentPage + 1);
+    container.appendChild(nextButton);
+}
+
+function changePage(type, page) {
+    if (type === 'suppliers') {
+        currentSupplierPage = page;
+        renderSuppliers();
+    } else if (type === 'inventory') {
+        currentInventoryPage = page;
+        renderInventory();
+    } else if (type === 'purchase') {
+        currentPurchasePage = page;
+        renderPurchaseOrders();
+    }
+}
+
+async function fetchSuppliers(searchTerm = '', page = 1) {
+    const response = await fetch(`/admin/get-suppliers/?search=${searchTerm}&page=${page}`, {
+        headers: { 'X-CSRFToken': getCsrfToken() }
+    });
+    if (!response.ok) throw new Error('Failed to fetch suppliers');
+    return await response.json();
+}
+
+async function fetchPurchaseOrders(page = 1) {
+    const response = await fetch(`/admin/get-purchase-orders/?page=${page}`, {
+        headers: { 'X-CSRFToken': getCsrfToken() }
+    });
+    if (!response.ok) throw new Error('Failed to fetch purchase orders');
+    return await response.json();
+}
+
+async function fetchInventory(searchTerm = '', category = 'all', page = 1) {
+    const response = await fetch(`/admin/get-inventory/?search=${searchTerm}&category=${category}&page=${page}`, {
+        headers: { 'X-CSRFToken': getCsrfToken() }
+    });
+    if (!response.ok) throw new Error('Failed to fetch inventory');
+    return await response.json();
+}
+
+function getCsrfToken() {
+    return getCookie('csrftoken') || '';
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', async () => {
+    // Set suppliers tab as active
+    document.getElementById('suppliers-tab').classList.add('text-blue-700', 'bg-blue-100', 'active');
+    document.getElementById('inventory-tab').classList.add('text-gray-700', 'bg-gray-100');
+    document.getElementById('suppliers-content').classList.remove('hidden');
+    document.getElementById('inventory-content').classList.add('hidden');
+
+    // Load initial data
+    taxSettings = await fetchTaxSettings();
+    vehicleData = await fetchVehicleData();
+    renderSuppliers();
+    renderPurchaseOrders();
+    renderInventory();
+
+    // Populate vehicle dropdowns in stock modal
+    const companySelect = document.getElementById('stock-vehicle-company');
+    const typeSelect = document.getElementById('stock-vehicle-type');
+    const modelSelect = document.getElementById('stock-vehicle-model');
+
+    // Populate company dropdown
+    companySelect.innerHTML = '<option value="">Select company</option>' + 
+        vehicleData.companies.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+
+    // Populate type dropdown (all types, as they are independent)
+    typeSelect.innerHTML = '<option value="">Select type</option>' + 
+        vehicleData.types.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
+
+    // Event listeners for dynamic updates in Add Stock modal
+    companySelect.addEventListener('change', async () => {
+        const companyName = companySelect.value;
+        modelSelect.innerHTML = '<option value="">Select model</option>'; // Reset model dropdown
+        if (companyName) {
+            await updateModelDropdown(companyName, typeSelect.value, modelSelect);
+        }
+    });
+
+    typeSelect.addEventListener('change', async () => {
+        const companyName = companySelect.value;
+        const typeName = typeSelect.value;
+        if (companyName || typeName) {
+            await updateModelDropdown(companyName, typeName, modelSelect);
+        } else {
+            modelSelect.innerHTML = '<option value="">Select model</option>';
+        }
+    });
+
+    // Populate supplier dropdown in purchase modal
+    const supplierSelect = document.getElementById('purchase-supplier');
+    const suppliers = await fetchSuppliers();
+    supplierSelect.innerHTML = '<option value="">Choose supplier</option>' + 
+        suppliers.suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+
+    // Tab switching
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('text-blue-700', 'bg-blue-100', 'active');
+                b.classList.add('text-gray-700', 'bg-gray-100');
+            });
+            btn.classList.add('text-blue-700', 'bg-blue-100', 'active');
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+            document.getElementById(`${btn.id.split('-')[0]}-content`).classList.remove('hidden');
+        });
+    });
+
+    // Supplier modal
+    document.getElementById('add-supplier-btn').addEventListener('click', () => {
+        document.getElementById('supplier-modal-title').textContent = 'Add New Supplier';
+        document.getElementById('supplier-name').value = '';
+        document.getElementById('contact-person').value = '';
+        document.getElementById('supplier-phone').value = '';
+        document.getElementById('supplier-email').value = '';
+        document.getElementById('supplier-address').value = '';
+        document.getElementById('supplier-vat').value = '';
+        document.getElementById('supplier-category').value = '';
+        document.getElementById('credit-limit').value = '';
+        document.getElementById('payment-terms').value = '30-days';
+        delete document.getElementById('save-supplier-btn').dataset.id;
+        document.getElementById('add-supplier-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('close-supplier-modal').addEventListener('click', () => {
+        document.getElementById('add-supplier-modal').classList.add('hidden');
+    });
+
+    document.getElementById('cancel-supplier-btn').addEventListener('click', () => {
+        document.getElementById('add-supplier-modal').classList.add('hidden');
+    });
+
+    document.getElementById('save-supplier-btn').addEventListener('click', async () => {
+        const supplierData = {
+            id: document.getElementById('save-supplier-btn').dataset.id,
+            name: document.getElementById('supplier-name').value,
+            contactPerson: document.getElementById('contact-person').value,
+            phone: document.getElementById('supplier-phone').value,
+            email: document.getElementById('supplier-email').value,
+            address: document.getElementById('supplier-address').value,
+            vat: document.getElementById('supplier-vat').value,
+            category: document.getElementById('supplier-category').value,
+            creditLimit: parseFloat(document.getElementById('credit-limit').value) || 0,
+            paymentTerms: document.getElementById('payment-terms').value,
+            status: 'active'
+        };
+        try {
+            const response = await fetch('/admin/save-supplier/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(supplierData)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message, 'success');
+                document.getElementById('add-supplier-modal').classList.add('hidden');
+                renderSuppliers();
+                const supplierSelect = document.getElementById('purchase-supplier');
+                const suppliers = await fetchSuppliers();
+                supplierSelect.innerHTML = '<option value="">Choose supplier</option>' + 
+                    suppliers.suppliers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            } else {
+                showToast(result.error, 'error');
+            }
+        } catch (error) {
+            showToast('Error saving supplier: ' + error.message, 'error');
+        }
+    });
+
+    // Purchase order modal
+    document.getElementById('new-purchase-btn').addEventListener('click', () => {
+        selectedSupplier = null;
+        purchaseItems = [];
+        document.getElementById('purchase-order-title').textContent = 'New Purchase Order';
+        document.getElementById('purchase-supplier').value = '';
+        document.getElementById('supplier-details').classList.add('hidden');
+        document.getElementById('payment-mode').value = 'cash';
+        document.getElementById('purchase-order-modal').classList.remove('hidden');
+        renderPurchaseItems();
+        calculatePurchaseTotal();
+    });
+
+    document.getElementById('close-purchase-modal').addEventListener('click', () => {
+        document.getElementById('purchase-order-modal').classList.add('hidden');
+    });
+
+    document.getElementById('cancel-purchase-btn').addEventListener('click', () => {
+        document.getElementById('purchase-order-modal').classList.add('hidden');
+    });
+
+    document.getElementById('purchase-supplier').addEventListener('change', async () => {
+        const supplierId = document.getElementById('purchase-supplier').value;
+        if (supplierId) {
+            const suppliers = await fetchSuppliers();
+            selectedSupplier = suppliers.suppliers.find(s => s.id == supplierId);
+            document.getElementById('supplier-details').classList.remove('hidden');
+            document.getElementById('credit-available').textContent = `Credit Available: NPR ${(selectedSupplier.creditLimit - selectedSupplier.currentCredit).toLocaleString()}`;
+            document.getElementById('payment-terms-display').textContent = `Payment Terms: ${selectedSupplier.paymentTerms}`;
+            calculatePurchaseTotal();
+        } else {
+            document.getElementById('supplier-details').classList.add('hidden');
+            selectedSupplier = null;
+            calculatePurchaseTotal();
+        }
+    });
+
+    document.getElementById('add-purchase-item').addEventListener('click', () => {
+        purchaseItems.push({
+            name: '',
+            code: '',
+            quantity: 1,
+            rate: 0,
+            sellingPrice: 0,
+            vehicle_company: '',
+            vehicle_type: '',
+            vehicle_model: ''
+        });
+        renderPurchaseItems();
+        calculatePurchaseTotal();
+    });
+
+    document.getElementById('create-purchase-btn').addEventListener('click', async () => {
+        if (!selectedSupplier) {
+            showToast('Please select a supplier', 'error');
+            return;
+        }
+        if (purchaseItems.length === 0) {
+            showToast('Please add at least one item', 'error');
+            return;
+        }
+        if (purchaseItems.some(item => !item.name)) {
+            showToast('All items must have a name', 'error');
+            return;
+        }
+        const purchaseData = {
+            supplierId: selectedSupplier.id,
+            paymentMode: document.getElementById('payment-mode').value,
+            items: purchaseItems.map(item => ({
+                name: item.name,
+                code: item.code || '',
+                quantity: item.quantity,
+                rate: item.rate,
+                sellingPrice: item.sellingPrice,
+                vehicle_company: item.vehicle_company,
+                vehicle_type: item.vehicle_type,
+                vehicle_model: item.vehicle_model
+            }))
+        };
+        try {
+            const response = await fetch('/admin/create-purchase-order/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(purchaseData)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message, 'success');
+                document.getElementById('purchase-order-modal').classList.add('hidden');
+                renderSuppliers();
+                renderPurchaseOrders();
+                renderInventory();
+            } else {
+                showToast(result.error, 'error');
+            }
+        } catch (error) {
+            showToast('Error creating purchase order: ' + error.message, 'error');
+        }
+    });
+
+    // Stock modal
+    document.getElementById('add-stock-btn').addEventListener('click', () => {
+        document.getElementById('stock-modal-title').textContent = 'Add New Stock Item';
+        document.getElementById('stock-code').value = '';
+        document.getElementById('stock-name').value = '';
+        document.getElementById('stock-category').value = '';
+        document.getElementById('stock-vehicle-company').value = '';
+        document.getElementById('stock-vehicle-type').value = '';
+        document.getElementById('stock-vehicle-model').value = '';
+        document.getElementById('stock-quantity').value = '';
+        document.getElementById('stock-min').value = '5';
+        document.getElementById('stock-purchase-price').value = '';
+        document.getElementById('stock-selling-price').value = '';
+        document.getElementById('stock-supplier').value = '';
+        delete document.getElementById('save-stock-btn').dataset.id;
+        document.getElementById('add-stock-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('close-stock-modal').addEventListener('click', () => {
+        document.getElementById('add-stock-modal').classList.add('hidden');
+    });
+
+    document.getElementById('cancel-stock-btn').addEventListener('click', () => {
+        document.getElementById('add-stock-modal').classList.add('hidden');
+    });
+
+    document.getElementById('save-stock-btn').addEventListener('click', async () => {
+        const stockData = {
+            id: document.getElementById('save-stock-btn').dataset.id,
+            code: document.getElementById('stock-code').value,
+            name: document.getElementById('stock-name').value,
+            category: document.getElementById('stock-category').value,
+            vehicleCompany: document.getElementById('stock-vehicle-company').value,
+            vehicleType: document.getElementById('stock-vehicle-type').value,
+            vehicleModel: document.getElementById('stock-vehicle-model').value,
+            quantity: parseInt(document.getElementById('stock-quantity').value) || 0,
+            minStock: parseInt(document.getElementById('stock-min').value) || 5,
+            purchasePrice: parseFloat(document.getElementById('stock-purchase-price').value) || 0,
+            sellingPrice: parseFloat(document.getElementById('stock-selling-price').value) || 0,
+            supplier: document.getElementById('stock-supplier').value
+        };
+        if (!stockData.code || !stockData.name || !stockData.category || stockData.quantity < 0 || stockData.purchasePrice < 0 || stockData.sellingPrice < 0) {
+            showToast('Please fill all required fields with valid values', 'error');
+            return;
+        }
+        try {
+            const response = await fetch('/admin/save-inventory/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(stockData)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message, 'success');
+                document.getElementById('add-stock-modal').classList.add('hidden');
+                renderInventory();
+            } else {
+                showToast(result.error, 'error');
+            }
+        } catch (error) {
+            showToast('Error saving stock item: ' + error.message, 'error');
+        }
+    });
+
+    // Supplier payment modal
+    document.getElementById('close-payment-modal').addEventListener('click', () => {
+        document.getElementById('supplier-payment-modal').classList.add('hidden');
+    });
+
+    document.getElementById('cancel-payment-btn').addEventListener('click', () => {
+        document.getElementById('supplier-payment-modal').classList.add('hidden');
+    });
+
+    document.getElementById('make-payment-btn').addEventListener('click', async () => {
+        const paymentData = {
+            supplierId: document.getElementById('payment-supplier-id').value,
+            purchaseOrderId: document.getElementById('payment-purchase-order').value,
+            amount: parseFloat(document.getElementById('payment-amount').value) || 0
+        };
+        if (paymentData.amount <= 0) {
+            showToast('Please enter a valid payment amount', 'error');
+            return;
+        }
+        try {
+            const response = await fetch('/admin/make-payment/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify(paymentData)
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showToast(result.message, 'success');
+                document.getElementById('supplier-payment-modal').classList.add('hidden');
+                renderSuppliers();
+                renderPurchaseOrders();
+            } else {
+                showToast(result.error, 'error');
+            }
+        } catch (error) {
+            showToast('Error processing payment: ' + error.message, 'error');
+        }
+    });
+
+    // Search functionality
+    document.getElementById('supplier-search').addEventListener('input', async (e) => {
+        currentSupplierPage = 1;
+        await renderSuppliers(e.target.value);
+    });
+
+    document.getElementById('inventory-search').addEventListener('input', async (e) => {
+        currentInventoryPage = 1;
+        await renderInventory(e.target.value, document.getElementById('category-filter').value);
+    });
+
+    document.getElementById('filter-inventory-btn').addEventListener('click', async () => {
+        currentInventoryPage = 1;
+        await renderInventory(document.getElementById('inventory-search').value, document.getElementById('category-filter').value);
+    });
+});
+
+// Other functions (renderSuppliers, renderPurchaseOrders, renderInventory, etc.) remain unchanged
+async function renderSuppliers(searchTerm = '') {
+    try {
+        const data = await fetchSuppliers(searchTerm, currentSupplierPage);
+        const suppliersGrid = document.getElementById('suppliers-grid');
+        suppliersGrid.innerHTML = data.suppliers.map(supplier => `
+            <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center space-x-2">
+                        <div class="bg-blue-100 rounded-full p-2">
+                            <i class="fas fa-building w-4 h-4 text-blue-600"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xs font-semibold text-gray-900">${supplier.name}</h3>
+                            <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">${supplier.category}</span>
+                        </div>
+                    </div>
+                    <span class="px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(supplier.status)}">${supplier.status.toUpperCase()}</span>
+                </div>
+                <div class="space-y-1 mb-2">
+                    <div class="flex items-center space-x-1">
+                        <i class="fas fa-phone w-3 h-3 text-gray-400"></i>
+                        <span class="text-xs text-gray-600">${supplier.phone}</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <i class="fas fa-envelope w-3 h-3 text-gray-400"></i>
+                        <span class="text-xs text-gray-600">${supplier.email || '-'}</span>
+                    </div>
+                    <div class="flex items-center space-x-1">
+                        <i class="fas fa-map-marker-alt w-3 h-3 text-gray-400"></i>
+                        <span class="text-xs text-gray-600">${supplier.address || '-'}</span>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-md p-2 mb-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-medium text-gray-700">Credit Utilization</span>
+                        <span class="text-xs text-gray-600">NPR ${supplier.currentCredit.toLocaleString()} / NPR ${supplier.creditLimit.toLocaleString()}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-1.5">
+                        <div class="h-1.5 rounded-full ${getCreditUtilization(supplier.currentCredit, supplier.creditLimit) > 80 ? 'bg-red-500' : getCreditUtilization(supplier.currentCredit, supplier.creditLimit) > 60 ? 'bg-yellow-500' : 'bg-green-500'}" style="width: ${getCreditUtilization(supplier.currentCredit, supplier.creditLimit)}%"></div>
+                    </div>
+                    <div class="flex justify-between items-center mt-1 text-xs text-gray-500">
+                        <span>Payment Terms: ${supplier.paymentTerms}</span>
+                        <span>${getCreditUtilization(supplier.currentCredit, supplier.creditLimit)}% used</span>
+                    </div>
+                </div>
+                <div class="flex space-x-2">
+                    <button class="purchase-btn flex-1 bg-green-600 hover:bg-green-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
+                        <i class="fas fa-box w-3 h-3"></i>
+                        <span>Purchase</span>
+                    </button>
+                    <button class="edit-supplier-btn flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
+                        <i class="fas fa-edit w-3 h-3"></i>
+                        <span>Edit</span>
+                    </button>
+                    ${supplier.currentCredit > 0 ? `
+                    <button class="pay-now-btn flex-1 bg-orange-600 hover:bg-orange-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
+                        <i class="fas fa-money-bill w-3 h-3"></i>
+                        <span>Pay Now</span>
+                    </button>` : ''}
+                </div>
+            </div>
+        `).join('');
+        renderPagination('suppliers-pagination', currentSupplierPage, data.total_pages);
+
+        // Update supplier stats
+        const totalSuppliers = data.suppliers.length + ((data.total_pages - 1) * 9); // Assuming 9 per page
+        const activeSuppliers = data.suppliers.filter(s => s.status === 'active').length;
+        const totalCredit = data.suppliers.reduce((sum, s) => sum + s.currentCredit, 0);
+        const pendingPayments = data.suppliers.filter(s => s.currentCredit > 0).length;
+        document.getElementById('total-suppliers').textContent = totalSuppliers;
+        document.getElementById('active-suppliers').textContent = activeSuppliers;
+        document.getElementById('total-credit').textContent = `NPR ${totalCredit.toLocaleString()}`;
+        document.getElementById('pending-payments').textContent = pendingPayments;
+
+        // Add event listeners for buttons
+        document.querySelectorAll('.purchase-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                selectedSupplier = data.suppliers.find(s => s.id == btn.dataset.id);
+                document.getElementById('purchase-order-title').textContent = `New Purchase Order - ${selectedSupplier.name}`;
+                document.getElementById('purchase-supplier').value = selectedSupplier.id;
+                document.getElementById('supplier-details').classList.remove('hidden');
+                document.getElementById('credit-available').textContent = `Credit Available: NPR ${(selectedSupplier.creditLimit - selectedSupplier.currentCredit).toLocaleString()}`;
+                document.getElementById('payment-terms-display').textContent = `Payment Terms: ${selectedSupplier.paymentTerms}`;
+                document.getElementById('purchase-order-modal').classList.remove('hidden');
+                purchaseItems = [];
+                renderPurchaseItems();
+                calculatePurchaseTotal();
+            });
+        });
+
+        document.querySelectorAll('.edit-supplier-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const supplier = data.suppliers.find(s => s.id == btn.dataset.id);
+                document.getElementById('supplier-modal-title').textContent = `Edit Supplier - ${supplier.name}`;
+                document.getElementById('supplier-name').value = supplier.name;
+                document.getElementById('contact-person').value = supplier.contactPerson || '';
+                document.getElementById('supplier-phone').value = supplier.phone;
+                document.getElementById('supplier-email').value = supplier.email || '';
+                document.getElementById('supplier-address').value = supplier.address || '';
+                document.getElementById('supplier-vat').value = supplier.vat || '';
+                document.getElementById('supplier-category').value = supplier.category;
+                document.getElementById('credit-limit').value = supplier.creditLimit;
+                document.getElementById('payment-terms').value = supplier.paymentTerms;
+                document.getElementById('save-supplier-btn').dataset.id = supplier.id;
+                document.getElementById('add-supplier-modal').classList.remove('hidden');
+            });
+        });
+
+        document.querySelectorAll('.pay-now-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const supplier = data.suppliers.find(s => s.id == btn.dataset.id);
+                document.getElementById('payment-supplier-name').value = supplier.name;
+                document.getElementById('payment-supplier-id').value = supplier.id;
+                document.getElementById('payment-current-credit').value = `NPR ${supplier.currentCredit.toLocaleString()}`;
+                document.getElementById('payment-amount').value = '';
+                const poResponse = await fetchPurchaseOrders();
+                const purchaseOrders = poResponse.purchase_orders.filter(po => po.supplier === supplier.name && po.status !== 'paid');
+                const poSelect = document.getElementById('payment-purchase-order');
+                poSelect.innerHTML = '<option value="">Select purchase order</option>' + purchaseOrders.map(po => `<option value="${po.id}">${po.purchaseNo} (NPR ${po.amount.toLocaleString()})</option>`).join('');
+                document.getElementById('supplier-payment-modal').classList.remove('hidden');
+            });
+        });
+    } catch (error) {
+        alert('Error loading suppliers: ' + error.message);
+    }
+}
+
+async function renderPurchaseOrders() {
+    try {
+        const data = await fetchPurchaseOrders(currentPurchasePage);
+        const purchaseOrders = document.getElementById('purchase-orders');
+        purchaseOrders.innerHTML = data.purchase_orders.map(po => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-1.5 text-xs text-gray-600">${po.purchaseNo}</td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">${po.supplier}</td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">${po.date}</td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">NPR ${po.amount.toLocaleString()}</td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">${po.paymentMode}</td>
+                <td class="px-4 py-1.5">
+                    <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(po.status)}">${po.status.replace('_', ' ').toUpperCase()}</span>
+                </td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">${po.dueDate || '-'}</td>
+                <td class="px-4 py-1.5">
+                    <button class="view-po-btn text-blue-600 hover:text-blue-700 text-xs" data-id="${po.id}">
+                        <i class="fas fa-eye w-3 h-3"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        renderPagination('purchase-orders-pagination', currentPurchasePage, data.total_pages);
+
+        document.querySelectorAll('.view-po-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const po = data.purchase_orders.find(p => p.id == btn.dataset.id);
+                alert(`Purchase Order Details:\n\nPO Number: ${po.purchaseNo}\nSupplier: ${po.supplier}\nItems:\n${po.items.map(item => `- ${item.name} (${item.quantity} x NPR ${item.rate.toLocaleString()} = NPR ${item.amount.toLocaleString()})`).join('\n')}`);
+            });
+        });
+    } catch (error) {
+        alert('Error loading purchase orders: ' + error.message);
+    }
+}
+
+async function renderInventory(searchTerm = '', category = 'all') {
+    try {
+        const data = await fetchInventory(searchTerm, category, currentInventoryPage);
+        const inventoryTable = document.getElementById('inventory-table');
+        inventoryTable.innerHTML = data.parts.map(part => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-1.5">
+                    <div class="text-xs font-semibold text-gray-900">${part.name}</div>
+                    <div class="text-xs text-gray-600">${part.code}</div>
+                    ${part.supplier ? `<div class="text-xs text-gray-500">Supplier: ${part.supplier}</div>` : ''}
+                </td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">${part.category}</td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">
+                    ${part.vehicle_company ? `Company: ${part.vehicle_company}<br>` : ''}
+                    ${part.vehicle_type ? `Type: ${part.vehicle_type}<br>` : ''}
+                    ${part.vehicle_model ? `Model: ${part.vehicle_model}` : ''}
+                </td>
+                <td class="px-4 py-1.5">
+                    <div class="text-xs text-gray-600">In Stock: ${part.quantity}</div>
+                    <div class="text-xs text-gray-500">Min Stock: ${part.minStock}</div>
+                </td>
+                <td class="px-4 py-1.5">
+                    <div class="text-xs text-gray-600">Purchase: NPR ${part.purchasePrice.toLocaleString()}</div>
+                    <div class="text-xs text-gray-600">Selling: NPR ${part.sellingPrice.toLocaleString()}</div>
+                </td>
+                <td class="px-4 py-1.5">
+                    <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(part.status)}">${part.status.replace('-', ' ').toUpperCase()}</span>
+                </td>
+                <td class="px-4 py-1.5 text-xs text-gray-600">${part.lastUpdated} ${getMovementIcon(part.movement)}</td>
+                <td class="px-4 py-1.5">
+                    <button class="edit-stock-btn text-blue-600 hover:text-blue-700 text-xs" data-id="${part.id}">
+                        <i class="fas fa-edit w-3 h-3"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        renderPagination('inventory-pagination', currentInventoryPage, data.total_pages);
+
+        // Update inventory stats
+        const totalItems = data.parts.length + ((data.total_pages - 1) * 10); // Assuming 10 per page
+        const lowStock = data.parts.filter(p => p.status === 'low-stock').length;
+        const outOfStock = data.parts.filter(p => p.status === 'out-of-stock').length;
+        const totalValue = data.parts.reduce((sum, p) => sum + (p.quantity * p.sellingPrice), 0);
+        document.getElementById('total-items').textContent = totalItems;
+        document.getElementById('low-stock').textContent = lowStock;
+        document.getElementById('out-of-stock').textContent = outOfStock;
+        document.getElementById('total-value').textContent = `NPR ${totalValue.toLocaleString()}`;
+
+        // Low stock alert
+        const lowStockItems = data.parts.filter(p => p.status === 'low-stock');
+        if (lowStockItems.length > 0) {
+            document.getElementById('low-stock-alert').classList.remove('hidden');
+            document.getElementById('low-stock-count').textContent = `${lowStockItems.length} Item${lowStockItems.length > 1 ? 's' : ''} Low on Stock`;
+            document.getElementById('low-stock-items').textContent = lowStockItems.map(p => `${p.name} (${p.quantity} left)`).join(', ');
+        } else {
+            document.getElementById('low-stock-alert').classList.add('hidden');
+        }
+
+        document.querySelectorAll('.edit-stock-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const part = data.parts.find(p => p.id == btn.dataset.id);
+                document.getElementById('stock-modal-title').textContent = `Edit Stock Item - ${part.name}`;
+                document.getElementById('stock-code').value = part.code;
+                document.getElementById('stock-name').value = part.name;
+                document.getElementById('stock-category').value = part.category;
+                document.getElementById('stock-vehicle-company').value = part.vehicle_company || '';
+                document.getElementById('stock-vehicle-type').value = part.vehicle_type || '';
+                document.getElementById('stock-vehicle-model').value = part.vehicle_model || '';
+                document.getElementById('stock-quantity').value = part.quantity;
+                document.getElementById('stock-min').value = part.minStock;
+                document.getElementById('stock-purchase-price').value = part.purchasePrice;
+                document.getElementById('stock-selling-price').value = part.sellingPrice;
+                document.getElementById('stock-supplier').value = part.supplier || '';
+                document.getElementById('save-stock-btn').dataset.id = part.id;
+                document.getElementById('add-stock-modal').classList.remove('hidden');
+            });
+        });
+    } catch (error) {
+        alert('Error loading inventory: ' + error.message);
+    }
+}
+</script>
+    </body>
+</html>
+{% endblock %}

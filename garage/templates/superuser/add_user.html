@@ -1,0 +1,612 @@
+{% extends 'base.html' %}
+{% block title %}Add Client Company - Garage POS{% endblock %}
+{% block page_title %}Add Client Company{% endblock %}
+{% block content %}
+<style>
+    .stat-card {
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 50;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-content {
+        background-color: white;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 600px;
+        padding: 1.5rem;
+        position: relative;
+    }
+    .modal-close {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        cursor: pointer;
+        font-size: 1.25rem;
+    }
+    .dataTable tbody tr:hover {
+        background-color: #f9fafb;
+    }
+    .toggle-button {
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    .toggle-button:hover {
+        opacity: 0.8;
+    }
+</style>
+
+<!-- Include Toastify for notifications -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
+<!-- Main Content Container -->
+<div class="p-4 sm:p-5 space-y-4">
+    <!-- Header Section -->
+    <div class="mb-4">
+        <h1 class="text-2xl font-bold text-gray-800">Add Client Company</h1>
+        <p class="text-gray-600 text-sm">Create a new client company and its admin user</p>
+    </div>
+
+    <!-- Combined Form Section -->
+    <div class="stat-card bg-white p-5 rounded-lg shadow-sm">
+        <h2 class="text-lg font-semibold text-gray-800 mb-3">Create Client Company and Admin User</h2>
+        <form id="addCompanyForm" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Company Name <i class="fas fa-building ml-1 text-gray-500"></i></label>
+                    <input type="text" name="company_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter company name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Logo <i class="fas fa-image ml-1 text-gray-500"></i></label>
+                    <input type="file" name="company_logo" accept="image/*" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Address <i class="fas fa-map-marker-alt ml-1 text-gray-500"></i></label>
+                    <input type="text" name="company_address" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter address">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Contact <i class="fas fa-phone ml-1 text-gray-500"></i></label>
+                    <input type="text" name="company_contact" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter contact number">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Username <i class="fas fa-user ml-1 text-gray-500"></i></label>
+                    <input type="text" name="username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter username">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email <i class="fas fa-envelope ml-1 text-gray-500"></i></label>
+                    <input type="email" name="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter email">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Password <i class="fas fa-lock ml-1 text-gray-500"></i></label>
+                    <input type="password" name="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter password">
+                </div>
+                <div class="sm:col-span-2">
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm"><i class="fas fa-plus mr-2"></i>Add Company & Admin User</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800">Client Companies & Admin Users</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dataTable">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for client in client_garages %}
+                    {% with admin=client.user_set.all|first %}
+                    <tr>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-8 w-8">
+                                    {% if client.logo %}
+                                    <img src="{{ client.logo.url }}" alt="Company logo" class="h-8 w-8 rounded-full">
+                                    {% else %}
+                                    <img src="https://placehold.co/32x32" alt="Default logo" class="h-8 w-8 rounded-full">
+                                    {% endif %}
+                                </div>
+                                <div class="ml-3">
+                                    <div class="text-sm font-medium text-gray-900">{{ admin.username }}</div>
+                                    <div class="text-xs text-gray-500">{{ admin.email }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ client.name }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ admin.get_role_display }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            <i class="fas {% if admin.is_active %}fa-toggle-on text-green-600{% else %}fa-toggle-off text-red-600{% endif %} toggle-button text-lg" data-user-id="{{ admin.id }}" data-status="{% if admin.is_active %}active{% else %}inactive{% endif %}"></i>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{{ admin.date_joined|date:"M d, Y" }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                            <a href="#" class="text-indigo-600 hover:text-indigo-900 mr-3 open-details-modal" data-client-id="{{ client.id }}" data-username="{{ admin.username }}" data-email="{{ admin.email }}" data-company="{{ client.name }}" data-role="{{ admin.get_role_display }}" data-status="{% if admin.is_active %}Active{% else %}Inactive{% endif %}" data-created="{{ admin.date_joined|date:'M d, Y' }}"><i class="fas fa-eye mr-1"></i>Details</a>
+                            <a href="#" class="text-blue-600 hover:text-blue-900 mr-3 open-edit-modal" data-client-id="{{ client.id }}" data-username="{{ admin.username }}" data-email="{{ admin.email }}" data-company="{{ client.name }}" data-address="{{ client.address|default_if_none:'' }}" data-contact="{{ client.contact|default_if_none:'' }}" data-status="{% if admin.is_active %}active{% else %}inactive{% endif %}"><i class="fas fa-edit mr-1"></i>Edit</a>
+                            <a href="#" class="text-gray-600 hover:text-gray-900 open-settings-modal" data-user-id="{{ admin.id }}" data-username="{{ admin.username }}"><i class="fas fa-cog"></i></a>
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="px-4 py-3 bg-gray-50 flex items-center justify-between border-t border-gray-200">
+            <div class="text-sm text-gray-500">
+                Showing <span class="font-medium">1</span> to <span class="font-medium">{{ client_garages.count }}</span> of <span class="font-medium">{{ client_garages.count }}</span> results
+            </div>
+            <div class="flex space-x-1">
+                <button class="px-2 py-1 rounded-md bg-white border text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50" disabled><i class="fas fa-chevron-left mr-1"></i>Previous</button>
+                <span class="px-2 py-1 rounded-md bg-indigo-600 text-xs font-medium text-white">1</span>
+                <button class="px-2 py-1 rounded-md bg-white border text-xs font-medium text-gray-700 hover:bg-gray-50"><i class="fas fa-chevron-right mr-1"></i>Next</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close text-gray-500 hover:text-gray-700 cursor-pointer">×</span>
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Client Company & Admin User Details</h2>
+            <div class="grid grid-cols-1 gap-2">
+                <div class="flex items-center">
+                    <i class="fas fa-building text-gray-500 mr-2"></i>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Company Name</p>
+                        <p class="text-sm text-gray-900" id="detailsCompany"></p>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-user text-gray-500 mr-2"></i>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Username</p>
+                        <p class="text-sm text-gray-900" id="detailsUsername"></p>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-envelope text-gray-500 mr-2"></i>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Email</p>
+                        <p class="text-sm text-gray-900" id="detailsEmail"></p>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-user-tag text-gray-500 mr-2"></i>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Role</p>
+                        <p class="text-sm text-gray-900" id="detailsRole"></p>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-toggle-on text-gray-500 mr-2"></i>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Subscription Status</p>
+                        <p class="text-sm text-gray-900" id="detailsStatus"></p>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <i class="fas fa-calendar-alt text-gray-500 mr-2"></i>
+                    <div>
+                        <p class="text-sm font-medium text-gray-700">Created At</p>
+                        <p class="text-sm text-gray-900" id="detailsCreated"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close text-gray-500 hover:text-gray-700 cursor-pointer">×</span>
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Edit Client Company & Admin User</h2>
+            <form id="editCompanyForm" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="client_id" id="editClientId">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Company Name <i class="fas fa-building ml-1 text-gray-500"></i></label>
+                        <input type="text" name="company_name" id="editCompany" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Logo <i class="fas fa-image ml-1 text-gray-500"></i></label>
+                        <input type="file" name="company_logo" id="editLogo" accept="image/*" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Address <i class="fas fa-map-marker-alt ml-1 text-gray-500"></i></label>
+                        <input type="text" name="company_address" id="editAddress" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Contact <i class="fas fa-phone ml-1 text-gray-500"></i></label>
+                        <input type="text" name="company_contact" id="editContact" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Username <i class="fas fa-user ml-1 text-gray-500"></i></label>
+                        <input type="text" id="editUsername" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email <i class="fas fa-envelope ml-1 text-gray-500"></i></label>
+                        <input type="email" name="email" id="editEmail" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Subscription Status <i class="fas fa-toggle-on ml-1 text-gray-500"></i></label>
+                        <select name="status" id="editStatus" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="sm:col-span-2">
+                        <button type="submit" class="w-full bg-indigo-600 text-white py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm"><i class="fas fa-save mr-2"></i>Save Changes</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal (Password Reset) -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close text-gray-500 hover:text-gray-700 cursor-pointer">×</span>
+            <h2 class="text-lg font-semibold text-gray-800 mb-3">Admin User Settings</h2>
+            <form id="resetPasswordForm" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="user_id" id="settingsUserId">
+                <p><strong>Username:</strong> <span id="settingsUsername"></span></p>
+                <p><strong>Current Password:</strong> <span id="settingsPassword">{{ user.plaintext_password|default:'Not set' }}</span></p>
+                <div class="mt-3">
+                    <label class="block text-sm font-medium text-gray-700">New Password <i class="fas fa-lock ml-1 text-gray-500"></i></label>
+                    <input type="password" name="new_password" id="newPassword" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Enter new password">
+                </div>
+                <div class="mt-3">
+                    <label class="block text-sm font-medium text-gray-700">Confirm New Password <i class="fas fa-lock ml-1 text-gray-500"></i></label>
+                    <input type="password" name="confirm_password" id="confirmPassword" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-600 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm" placeholder="Confirm new password">
+                </div>
+                <div class="mt-3">
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-1.5 rounded-md hover:bg-indigo-700 transition-colors text-sm"><i class="fas fa-key mr-2"></i>Reset Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Modal handling
+        const modals = document.querySelectorAll('.modal');
+        const closeButtons = document.querySelectorAll('.modal-close');
+
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = 'flex';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        closeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                modals.forEach(modal => modal.style.display = 'none');
+            });
+        });
+
+        // Helper function to get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Display Django messages using Toastify
+        {% for message in messages %}
+            Toastify({
+                text: "{{ message }}",
+                duration: 3000,
+                close: true,
+                gravity: "top",
+                position: "right",
+                backgroundColor: "{{ message.tags }}" === "success" ? "#4CAF50" : "#F44336",
+                stopOnFocus: true,
+            }).showToast();
+        {% endfor %}
+
+        // Add company form submission
+        document.getElementById('addCompanyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+            fetch('{% url "add_company_user" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    Toastify({
+                        text: data.message,
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#4CAF50",
+                    }).showToast();
+                    window.location.reload();
+                } else {
+                    Toastify({
+                        text: data.error || 'Failed to add company',
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#F44336",
+                    }).showToast();
+                }
+            })
+            .catch(error => {
+                Toastify({
+                    text: 'Network error occurred',
+                    duration: 3000,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    backgroundColor: "#F44336",
+                }).showToast();
+            });
+        });
+
+        // Details modal
+        document.querySelectorAll('.open-details-modal').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('detailsCompany').textContent = e.target.dataset.company;
+                document.getElementById('detailsUsername').textContent = e.target.dataset.username;
+                document.getElementById('detailsEmail').textContent = e.target.dataset.email;
+                document.getElementById('detailsRole').textContent = e.target.dataset.role;
+                document.getElementById('detailsStatus').textContent = e.target.dataset.status;
+                document.getElementById('detailsCreated').textContent = e.target.dataset.created;
+                openModal('detailsModal');
+            });
+        });
+
+        // Edit modal
+        document.querySelectorAll('.open-edit-modal').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('editClientId').value = e.target.dataset.clientId;
+                document.getElementById('editCompany').value = e.target.dataset.company;
+                document.getElementById('editAddress').value = e.target.dataset.address;
+                document.getElementById('editContact').value = e.target.dataset.contact;
+                document.getElementById('editUsername').value = e.target.dataset.username;
+                document.getElementById('editEmail').value = e.target.dataset.email;
+                document.getElementById('editStatus').value = e.target.dataset.status;
+                openModal('editModal');
+            });
+        });
+
+        // Edit form submission
+        document.getElementById('editCompanyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+            fetch('{% url "edit_client_company" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    Toastify({
+                        text: data.message,
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#4CAF50",
+                    }).showToast();
+                    window.location.reload();
+                } else {
+                    Toastify({
+                        text: data.error || 'Failed to update company',
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#F44336",
+                    }).showToast();
+                }
+            })
+            .catch(error => {
+                Toastify({
+                    text: 'Network error occurred',
+                    duration: 3000,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    backgroundColor: "#F44336",
+                }).showToast();
+            });
+        });
+
+        // Settings modal
+        document.querySelectorAll('.open-settings-modal').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                document.getElementById('settingsUserId').value = e.target.dataset.userId;
+                document.getElementById('settingsUsername').textContent = e.target.dataset.username;
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+                openModal('settingsModal');
+            });
+        });
+
+        // Reset password form submission
+        document.getElementById('resetPasswordForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+            fetch('{% url "reset_client_password" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    Toastify({
+                        text: data.message,
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#4CAF50",
+                    }).showToast();
+                    window.location.reload();
+                } else {
+                    Toastify({
+                        text: data.error || 'Failed to reset password',
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#F44336",
+                    }).showToast();
+                }
+            })
+            .catch(error => {
+                Toastify({
+                    text: 'Network error occurred',
+                    duration: 3000,
+                    close: true,
+                    gravity: "top",
+                    position: "right",
+                    backgroundColor: "#F44336",
+                }).showToast();
+            });
+        });
+
+        // Toggle status
+        document.querySelectorAll('.toggle-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const userId = e.target.dataset.userId;
+                const currentStatus = e.target.dataset.status;
+                const formData = new FormData();
+                formData.append('user_id', userId);
+                formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+                fetch('{% url "toggle_client_user_status" %}', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        e.target.dataset.status = data.status;
+                        e.target.classList.remove(currentStatus === 'active' ? 'fa-toggle-on' : 'fa-toggle-off', currentStatus === 'active' ? 'text-green-600' : 'text-red-600');
+                        e.target.classList.add(data.status === 'active' ? 'fa-toggle-on' : 'fa-toggle-off', data.status === 'active' ? 'text-green-600' : 'text-red-600');
+                        Toastify({
+                            text: data.message,
+                            duration: 3000,
+                            close: true,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#4CAF50",
+                        }).showToast();
+                    } else {
+                        Toastify({
+                            text: data.error || 'Failed to update status',
+                            duration: 3000,
+                            close: true,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#F44336",
+                        }).showToast();
+                    }
+                })
+                .catch(error => {
+                    Toastify({
+                        text: 'Network error occurred',
+                        duration: 3000,
+                        close: true,
+                        gravity: "top",
+                        position: "right",
+                        backgroundColor: "#F44336",
+                    }).showToast();
+                });
+            });
+        });
+
+        // DataTable pagination (client-side for simplicity)
+        const table = document.querySelector('.dataTable');
+        const rows = table.querySelectorAll('tbody tr');
+        const rowsPerPage = 10;
+        let currentPage = 1;
+
+        function updateTable() {
+            rows.forEach((row, index) => {
+                row.style.display = (index >= (currentPage - 1) * rowsPerPage && index < currentPage * rowsPerPage) ? '' : 'none';
+            });
+            document.querySelector('.font-medium:first-child').textContent = (currentPage - 1) * rowsPerPage + 1;
+            document.querySelector('.font-medium:nth-child(2)').textContent = Math.min(currentPage * rowsPerPage, rows.length);
+            document.querySelector('.font-medium:last-child').textContent = rows.length;
+        }
+
+        document.querySelector('button:not([disabled])').addEventListener('click', () => {
+            if (currentPage < Math.ceil(rows.length / rowsPerPage)) {
+                currentPage++;
+                updateTable();
+                document.querySelector('button[disabled]').disabled = false;
+            }
+            if (currentPage === Math.ceil(rows.length / rowsPerPage)) {
+                document.querySelector('button:not([disabled])').disabled = true;
+            }
+        });
+
+        document.querySelector('button[disabled]').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                updateTable();
+                document.querySelector('button:not([disabled])').disabled = false;
+            }
+            if (currentPage === 1) {
+                document.querySelector('button[disabled]').disabled = true;
+            }
+        });
+
+        updateTable();
+    });
+</script>
+{% endblock %}
