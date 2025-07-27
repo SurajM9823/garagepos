@@ -14,9 +14,11 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from django.core.exceptions import ValidationError
 from django.contrib import messages
 import os
+import logging
 import re
-from datetime import datetime
+from datetime import date, datetime
 
+logger = logging.getLogger(__name__)
 from garage.models import User, FinancialYear, SoftwareInfo, ClientGarage, ClientFiscalYear
 
 
@@ -55,11 +57,137 @@ def superuser_dashboard(request):
         return redirect(f'/{request.user.role}/dashboard/')
     return render(request, 'super_dash.html', {'user': request.user})
 
+from django.shortcuts import redirect, render
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import timedelta
+from garage.models import Vehicle, ServiceOrder, Bill, Part, User, ClientGarage, ClientFiscalYear
+from django.db.models import Sum, Count
+from django.db import IntegrityError, models
+
 @login_required
 def admin_dashboard(request):
     if request.user.is_superuser or request.user.role != 'admin':
         return redirect(f'/{request.user.role}/dashboard/')
-    return render(request, 'admin_dashboard.html', {'user': request.user})
+    
+    client_garage = request.user.client_garage
+    fiscal_year = request.user.client_fiscal_year
+    today = timezone.now().date()
+
+    # Filter by date (today, week, month)
+    date_filter = request.GET.get('date-filter', 'today')
+    if date_filter == 'week':
+        start_date = today - timedelta(days=today.weekday())
+    elif date_filter == 'month':
+        start_date = today.replace(day=1)
+    else:
+        start_date = today
+
+    # Stats
+    bikes_today = Vehicle.objects.filter(
+        client_garage=client_garage,
+        created_at__date__gte=start_date,
+        created_at__date__lte=today
+    ).count()
+
+    ongoing_services = ServiceOrder.objects.filter(
+        client_garage=client_garage,
+        status__in=['in-progress', 'waiting-assignment'],
+        created_date__gte=start_date,
+        created_date__lte=today
+    ).count()
+
+    pending_bills = Bill.objects.filter(
+        client_garage=client_garage,
+        status='Pending',
+        created_at__date__gte=start_date,
+        created_at__date__lte=today
+    ).count()
+
+    low_stock_alerts = Part.objects.filter(
+        client_garage=client_garage,
+        in_stock__lte=models.F('min_stock')
+    ).count()
+
+    income_today = Bill.objects.filter(
+        client_garage=client_garage,
+        status='Completed',
+        created_at__date__gte=start_date,
+        created_at__date__lte=today
+    ).aggregate(total=Sum('total'))['total'] or 0.00
+
+    active_staff = User.objects.filter(
+        client_garage=client_garage,
+        is_active=True,
+        role__in=['staff', 'manager', 'cashier', 'mechanic']
+    ).count()
+
+    # Ongoing Services List
+    ongoing_services_list = ServiceOrder.objects.filter(
+        client_garage=client_garage,
+        status__in=['in-progress', 'waiting-assignment'],
+        created_date__gte=start_date,
+        created_date__lte=today
+    ).select_related('vehicle', 'customer').prefetch_related('mechanics')[:3]
+
+    # Recent Activity (simplified; you can expand with more models)
+    recent_activities = []
+    recent_bills = Bill.objects.filter(
+        client_garage=client_garage,
+        created_at__date__gte=start_date,
+        created_at__date__lte=today
+    ).select_related('vehicle')[:2]
+    for bill in recent_bills:
+        recent_activities.append({
+            'description': f"Bill #{bill.bill_no} paid - {client_garage.currency}{bill.total}",
+            'time': bill.created_at.strftime('%I:%M %p'),
+            'color': 'green'
+        })
+
+    recent_service_orders = ServiceOrder.objects.filter(
+        client_garage=client_garage,
+        created_date__gte=start_date,
+        created_date__lte=today
+    ).select_related('vehicle')[:2]
+    for so in recent_service_orders:
+        recent_activities.append({
+            'description': f"Vehicle {so.vehicle.vehicle_number} service {'completed' if so.status == 'completed' else 'started'}",
+            'time': so.created_at.strftime('%I:%M %p'),
+            'color': 'blue' if so.status != 'completed' else 'green'
+        })
+
+    recent_parts = Part.objects.filter(
+        client_garage=client_garage,
+        last_movement__gte=start_date,
+        last_movement__lte=today
+    )[:1]
+    for part in recent_parts:
+        if part.in_stock <= part.min_stock:
+            recent_activities.append({
+                'description': f"Low stock alert: {part.name}",
+                'time': part.updated_at.strftime('%I:%M %p'),
+                'color': 'yellow'
+            })
+
+    # Financial Years
+    financial_years = ClientFiscalYear.objects.filter(client_garage=client_garage).order_by('-created_at')
+
+    context = {
+        'user': request.user,
+        'client_garage': client_garage,
+        'bikes_today': bikes_today,
+        'ongoing_services': ongoing_services,
+        'pending_bills': pending_bills,
+        'low_stock_alerts': low_stock_alerts,
+        'income_today': income_today,
+        'active_staff': active_staff,
+        'ongoing_services_list': ongoing_services_list,
+        'recent_activities': sorted(recent_activities, key=lambda x: x['time'], reverse=True)[:5],
+        'financial_years': financial_years,
+        'date_filter': date_filter,
+        'currency': client_garage.currency,
+    }
+    return render(request, 'admin_dashboard.html', context)
 
 @login_required
 def staff_dashboard(request):
@@ -70,11 +198,8 @@ def staff_dashboard(request):
 def login_page(request):
     return render(request, 'login.html', {'csrf_token': get_token(request)})
 
-@login_required
-def add_company_user(request):
-    if not request.user.is_superuser:
-        return redirect(f'/{request.user.role}/dashboard/')
-    return render(request, 'superuser/add_user.html', {'user': request.user})
+
+
 
 @login_required
 def superuser_setting(request):
@@ -89,78 +214,98 @@ def superuser_setting(request):
     }
     return render(request, 'superuser/superuser_setting.html', context)
 
+from django.http import JsonResponse
+
 @login_required
 def save_financial_year(request):
     if not request.user.is_superuser:
-        return redirect(f'/{request.user.role}/dashboard/')
+        return JsonResponse({'error': 'Unauthorized'}, status=403) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect(f'/{request.user.role}/dashboard/')
+    
     if request.method == 'POST':
         try:
+            logger.debug(f"POST Data: {request.POST}")
             name = request.POST.get('fy_name')
             fy_type = request.POST.get('fy_type')
             start_date = request.POST.get('fy_start_date')
             end_date = request.POST.get('fy_end_date')
 
+            logger.debug(f"Raw Start Date: '{start_date}'")
+            logger.debug(f"Raw End Date: '{end_date}'")
+
+            context = {
+                'user': request.user,
+                'financial_years': FinancialYear.objects.all().order_by('-created_at'),
+                'software_info': SoftwareInfo.objects.first()
+            }
+
             if not all([name, fy_type, start_date, end_date]):
-                messages.error(request, 'All fields are required.')
-                return render(request, 'superuser/superuser_setting.html', {
-                    'user': request.user,
-                    'financial_years': FinancialYear.objects.all().order_by('-created_at'),
-                    'software_info': SoftwareInfo.objects.first()
-                })
+                error_msg = 'All fields are required.'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'error': error_msg}, status=400)
+                messages.error(request, error_msg)
+                return render(request, 'superuser/superuser_setting.html', context)
 
-            # Validate name format (e.g., 2081/2082)
-            if not re.match(r'^\d{4}/\d{4}$', name):
-                messages.error(request, 'Financial year name must be in the format YYYY/YYYY (e.g., 2081/2082).')
-                return render(request, 'superuser/superuser_setting.html', {
-                    'user': request.user,
-                    'financial_years': FinancialYear.objects.all().order_by('-created_at'),
-                    'software_info': SoftwareInfo.objects.first()
-                })
+            # Update regex to accept YYYY/YY (e.g., 2081/82)
+            if not re.match(r'^\d{4}/\d{2}$', name):
+                error_msg = 'Financial year name must be in the format YYYY/YY (e.g., 2081/82).'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'error': error_msg}, status=400)
+                messages.error(request, error_msg)
+                return render(request, 'superuser/superuser_setting.html', context)
 
-            # Validate dates
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            start_date = datetime.strptime(start_date.strip(), '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date.strip(), '%Y-%m-%d').date()
             if start_date >= end_date:
-                messages.error(request, 'Start date must be before end date.')
-                return render(request, 'superuser/superuser_setting.html', {
-                    'user': request.user,
-                    'financial_years': FinancialYear.objects.all().order_by('-created_at'),
-                    'software_info': SoftwareInfo.objects.first()
-                })
+                error_msg = 'Start date must be before end date.'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'error': error_msg}, status=400)
+                messages.error(request, error_msg)
+                return render(request, 'superuser/superuser_setting.html', context)
 
-            # Check for duplicate name
             if FinancialYear.objects.filter(name=name).exists():
-                messages.error(request, 'Financial year name already exists.')
-                return render(request, 'superuser/superuser_setting.html', {
-                    'user': request.user,
-                    'financial_years': FinancialYear.objects.all().order_by('-created_at'),
-                    'software_info': SoftwareInfo.objects.first()
-                })
+                error_msg = 'Financial year name already exists.'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'error': error_msg}, status=400)
+                messages.error(request, error_msg)
+                return render(request, 'superuser/superuser_setting.html', context)
 
-            FinancialYear.objects.create(
+            financial_year = FinancialYear.objects.create(
                 name=name,
                 type=fy_type,
                 start_date=start_date,
                 end_date=end_date,
-                status='active'  # Default to active
+                status='active'
             )
+            logger.info(f"Created FinancialYear: {financial_year.id}, {financial_year.name}")
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': 'Financial year saved successfully.'}, status=200)
             messages.success(request, 'Financial year saved successfully.')
             return redirect('superuser_setting')
+        
         except ValueError as e:
-            messages.error(request, 'Invalid date format.')
-            return render(request, 'superuser/superuser_setting.html', {
-                'user': request.user,
-                'financial_years': FinancialYear.objects.all().order_by('-created_at'),
-                'software_info': SoftwareInfo.objects.first()
-            })
+            logger.error(f"ValueError: {str(e)}")
+            error_msg = f'Invalid date format or data: {str(e)}'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'error': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return render(request, 'superuser/superuser_setting.html', context)
+        except IntegrityError as e:
+            logger.error(f"IntegrityError: {str(e)}")
+            error_msg = f'Database integrity error: {str(e)}'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'error': error_msg}, status=400)
+            messages.error(request, error_msg)
+            return render(request, 'superuser/superuser_setting.html', context)
         except Exception as e:
-            messages.error(request, f'Error saving financial year: {str(e)}')
-            return render(request, 'superuser/superuser_setting.html', {
-                'user': request.user,
-                'financial_years': FinancialYear.objects.all().order_by('-created_at'),
-                'software_info': SoftwareInfo.objects.first()
-            })
-    return redirect('superuser_setting')
+            logger.error(f"Unexpected error: {str(e)}")
+            error_msg = f'Error saving financial year: {str(e)}'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'error': error_msg}, status=500)
+            messages.error(request, error_msg)
+            return render(request, 'superuser/superuser_setting.html', context)
+    
+    return JsonResponse({'error': 'Invalid request method'}, status=400) if request.headers.get('X-Requested-With') == 'XMLHttpRequest' else redirect('superuser_setting')
 
 @login_required
 def change_password(request):
@@ -317,6 +462,10 @@ def add_company_user(request):
         return redirect(f'/{request.user.role}/dashboard/')
     if request.method == 'POST':
         try:
+            # Log the request data for debugging
+            print("POST Data:", request.POST)
+            print("FILES:", request.FILES)
+
             # Client company data
             company_name = request.POST.get('company_name')
             company_address = request.POST.get('company_address')
@@ -328,51 +477,27 @@ def add_company_user(request):
 
             # Validate required fields
             if not all([company_name, username, email, password]):
-                messages.error(request, 'All fields are required.')
-                return render(request, 'superuser/add_user.html', {
-                    'user': request.user,
-                    'client_garages': ClientGarage.objects.all()
-                })
+                return JsonResponse({'error': 'All fields are required'}, status=400)
 
             # Validate email format
             if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
-                messages.error(request, 'Invalid email format.')
-                return render(request, 'superuser/add_user.html', {
-                    'user': request.user,
-                    'client_garages': ClientGarage.objects.all()
-                })
+                return JsonResponse({'error': 'Invalid email format'}, status=400)
 
             # Validate contact format if provided
             if company_contact and not re.match(r'^\+?[\d\s-]{10,}$', company_contact):
-                messages.error(request, 'Invalid contact number format.')
-                return render(request, 'superuser/add_user.html', {
-                    'user': request.user,
-                    'client_garages': ClientGarage.objects.all()
-                })
+                return JsonResponse({'error': 'Invalid contact number format'}, status=400)
 
             # Validate username uniqueness
             if User.objects.filter(username=username).exists():
-                messages.error(request, 'Username already exists.')
-                return render(request, 'superuser/add_user.html', {
-                    'user': request.user,
-                    'client_garages': ClientGarage.objects.all()
-                })
+                return JsonResponse({'error': 'Username already exists'}, status=400)
 
             # Validate email uniqueness
             if User.objects.filter(email=email).exists():
-                messages.error(request, 'Email already exists.')
-                return render(request, 'superuser/add_user.html', {
-                    'user': request.user,
-                    'client_garages': ClientGarage.objects.all()
-                })
+                return JsonResponse({'error': 'Email already exists'}, status=400)
 
             # Validate password strength
             if len(password) < 8:
-                messages.error(request, 'Password must be at least 8 characters long.')
-                return render(request, 'superuser/add_user.html', {
-                    'user': request.user,
-                    'client_garages': ClientGarage.objects.all()
-                })
+                return JsonResponse({'error': 'Password must be at least 8 characters long'}, status=400)
 
             # Create ClientGarage
             client_garage = ClientGarage.objects.create(
@@ -386,18 +511,10 @@ def add_company_user(request):
                 logo = request.FILES['company_logo']
                 if not logo.content_type.startswith('image/'):
                     client_garage.delete()
-                    messages.error(request, 'Logo must be an image file.')
-                    return render(request, 'superuser/add_user.html', {
-                        'user': request.user,
-                        'client_garages': ClientGarage.objects.all()
-                    })
+                    return JsonResponse({'error': 'Logo must be an image file'}, status=400)
                 if logo.size > 5 * 1024 * 1024:  # 5MB limit
                     client_garage.delete()
-                    messages.error(request, 'Logo file size must be under 5MB.')
-                    return render(request, 'superuser/add_user.html', {
-                        'user': request.user,
-                        'client_garages': ClientGarage.objects.all()
-                    })
+                    return JsonResponse({'error': 'Logo file size must be under 5MB'}, status=400)
                 client_garage.logo = logo
                 client_garage.save()
 
@@ -405,11 +522,7 @@ def add_company_user(request):
             financial_year = FinancialYear.objects.filter(status='active').first()
             if not financial_year:
                 client_garage.delete()
-                messages.error(request, 'No active financial year found.')
-                return render(request, 'superuser/add_user.html', {
-                    'user': request.user,
-                    'client_garages': ClientGarage.objects.all()
-                })
+                return JsonResponse({'error': 'No active financial year found'}, status=400)
 
             # Create admin User
             user = User.objects.create_user(
@@ -427,19 +540,15 @@ def add_company_user(request):
                 client_garage=client_garage,
                 name=f"{current_year}/{current_year + 1}",
                 type='fiscal',
-                start_date=date(current_year, 4, 1),  # Default: April 1
-                end_date=date(current_year + 1, 3, 31),  # Default: March 31 next year
+                start_date=date(current_year, 4, 1),
+                end_date=date(current_year + 1, 3, 31),
                 status='active'
             )
 
-            messages.success(request, 'Client company and admin user created successfully.')
-            return redirect('add_company_user')
+            return JsonResponse({'message': 'Client company and admin user created successfully'}, status=200)
         except Exception as e:
-            messages.error(request, f'Error creating client company: {str(e)}')
-            return render(request, 'superuser/add_user.html', {
-                'user': request.user,
-                'client_garages': ClientGarage.objects.all()
-            })
+            print("Exception:", str(e))
+            return JsonResponse({'error': str(e)}, status=500)
     return render(request, 'superuser/add_user.html', {
         'user': request.user,
         'client_garages': ClientGarage.objects.all()

@@ -36,7 +36,7 @@
                 <i class="fas fa-box w-3 h-3"></i>
                 <span>New Purchase</span>
             </button>
-            <button id="add-stock-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1 hidden">
+            <button id="add-stock-btn" class="bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-3 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1">
                 <i class="fas fa-plus w-3 h-3"></i>
                 <span>Add Stock</span>
             </button>
@@ -103,7 +103,7 @@
 
             <!-- Recent Purchase Orders -->
             <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3">
-                <h2 class="text-sm font-semibold text-gray-900 mb-2">Recent Purchase Orders</h2>
+            <h2 class="text-sm font-semibold text-gray-900 mb-2">Recent Purchase Orders</h2>
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
@@ -122,11 +122,9 @@
                     </table>
                 </div>
                 <div class="flex justify-center mt-3">
-                    <nav id="purchase-orders-pagination" class="inline-flex space-x-1">
-                        <!-- Pagination buttons will be added dynamically -->
-                    </nav>
+                    <nav id="purchase-orders-pagination" class="inline-flex space-x-1"></nav>
                 </div>
-            </div>
+        </div>
         </div>
 
         <!-- Inventory Tab Content -->
@@ -345,6 +343,197 @@
             </div>
         </div>
 
+        <div id="supplier-details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+    <div class="bg-white rounded-md max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+            <h2 class="text-sm font-semibold text-gray-900" id="supplier-details-title">Supplier Details</h2>
+            <button id="close-supplier-details-modal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="p-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
+            <!-- Supplier Information -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-medium text-gray-900">Supplier Information</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Name</label>
+                        <p id="supplier-details-name" class="text-xs text-gray-600">new supplier</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Contact Person</label>
+                        <p id="supplier-details-contact" class="text-xs text-gray-600">Ramu Yadav</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Phone</label>
+                        <p id="supplier-details-phone" class="text-xs text-gray-600">6565656565</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Email</label>
+                        <p id="supplier-details-email" class="text-xs text-gray-600">ramu@gmail.com</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Address</label>
+                        <p id="supplier-details-address" class="text-xs text-gray-600">nepal, Biratnagar</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">VAT Number</label>
+                        <p id="supplier-details-vat" class="text-xs text-gray-600">1212121221</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Category</label>
+                        <p id="supplier-details-category" class="text-xs text-gray-600">lubricants</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Purchase Summary -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-medium text-gray-900">Purchase Summary</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Total Purchases (NPR)</label>
+                        <p id="supplier-details-total-purchases" class="text-xs text-gray-600">NPR 14,620</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Total Paid (NPR)</label>
+                        <p id="supplier-details-total-paid" class="text-xs text-gray-600">NPR 0</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Outstanding Balance (NPR)</label>
+                        <p id="supplier-details-outstanding" class="text-xs text-gray-600">NPR 14,620</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Total Orders</label>
+                        <p id="supplier-details-total-orders" class="text-xs text-gray-600">6</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Credit Limit (NPR)</label>
+                        <p id="supplier-details-credit-limit" class="text-xs text-gray-600">NPR 500,000</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Current Credit (NPR)</label>
+                        <p id="supplier-details-current-credit" class="text-xs text-gray-600">NPR 9,450</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Payment Terms</label>
+                        <p id="supplier-details-payment-terms" class="text-xs text-gray-600">30-days</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700">Last Purchase</label>
+                        <p id="supplier-details-last-purchase" class="text-xs text-gray-600">-</p>
+                    </div>
+                </div>
+            </div>
+            <!-- Purchase History -->
+            <div class="lg:col-span-2">
+                <h3 class="text-xs font-medium text-gray-900 mb-2">Purchase History</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">PO Number</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Date</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Subtotal</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Tax</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Total</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Payment Mode</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Status</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Due Date</th>
+                                <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Items</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplier-purchase-history"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
+            <button id="close-supplier-details-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+
+        <!-- New Purchase Order Details Modal -->
+        <div id="purchase-order-details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+            <div class="bg-white rounded-md max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+                    <h2 class="text-sm font-semibold text-gray-900" id="purchase-order-details-title">Purchase Order Details</h2>
+                    <button id="close-purchase-order-details-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-4 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">PO Number</label>
+                            <p id="po-details-number" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Supplier</label>
+                            <p id="po-details-supplier" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Date</label>
+                            <p id="po-details-date" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Payment Mode</label>
+                            <p id="po-details-payment-mode" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Status</label>
+                            <p id="po-details-status" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Due Date</label>
+                            <p id="po-details-due-date" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Subtotal (NPR)</label>
+                            <p id="po-details-subtotal" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Tax (NPR)</label>
+                            <p id="po-details-tax" class="text-xs text-gray-600"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Total (NPR)</label>
+                            <p id="po-details-total" class="text-xs text-gray-600"></p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-medium text-gray-900 mb-2">Items</h3>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Name</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Code</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Vehicle Compatibility</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Quantity</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Rate (NPR)</th>
+                                        <th class="px-3 py-1 text-left text-xs font-medium text-gray-500">Amount (NPR)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="po-details-items"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
+                    <button id="close-po-details-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+
+
+
         <!-- Purchase Order Modal -->
         <div id="purchase-order-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
             <div class="bg-white rounded-md max-w-6xl w-full max-h-[90vh] overflow-y-auto">
@@ -429,128 +618,102 @@
             </div>
         </div>
 
-
-        <!-- Add Stock Modal -->
         <div id="add-stock-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
-            <div class="bg-white rounded-md max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
-                    <h2 class="text-sm font-semibold text-gray-900" id="stock-modal-title">Add New Stock Item</h2>
-                    <button id="close-stock-modal" class="text-gray-500 hover:text-gray-700">
-                        <i class="fas fa-times w-4 h-4"></i>
-                    </button>
+    <div class="bg-white rounded-md max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
+            <h2 class="text-sm font-semibold text-gray-900" id="stock-modal-title">Add New Stock Item</h2>
+            <button id="close-stock-modal" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="p-4 space-y-3">
+            <!-- Row 1: Part Name and Vehicle Company -->
+            <div class="flex flex-col sm:flex-row sm:space-x-3">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Part Name *</label>
+                    <input
+                        type="text"
+                        id="stock-name"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="e.g., Engine Oil 20W-50"
+                    />
                 </div>
-                <div class="p-4 space-y-2">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Part Code *</label>
-                        <input
-                            type="text"
-                            id="stock-code"
-                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="e.g., EO001"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Part Name *</label>
-                        <input
-                            type="text"
-                            id="stock-name"
-                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="e.g., Engine Oil 20W-50"
-                        />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Category *</label>
-                        <select id="stock-category" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Select category</option>
-                            {% for category in part_categories %}
-                                <option value="{{ category.name }}">{{ category.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Company</label>
-                        <select id="stock-vehicle-company" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Select company</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Type</label>
-                        <select id="stock-vehicle-type" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Select type</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Model</label>
-                        <select id="stock-vehicle-model" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                            <option value="">Select model</option>
-                        </select>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Quantity *</label>
-                            <input
-                                type="number"
-                                id="stock-quantity"
-                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="0"
-                                min="0"
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Min Stock</label>
-                            <input
-                                type="number"
-                                id="stock-min"
-                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="0"
-                                min="0"
-                            />
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Purchase Price (NPR) *</label>
-                            <input
-                                type="number"
-                                id="stock-purchase-price"
-                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="0.00"
-                                step="0.01"
-                                min="0"
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700 mb-1">Selling Price (NPR) *</label>
-                            <input
-                                type="number"
-                                id="stock-selling-price"
-                                class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="0.00"
-                                step="0.01"
-                                min="0"
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Supplier</label>
-                        <input
-                            type="text"
-                            id="stock-supplier"
-                            class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Supplier name"
-                        />
-                    </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Company</label>
+                    <select id="stock-vehicle-company" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select company</option>
+                    </select>
                 </div>
-                <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
-                    <button id="cancel-stock-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
-                        Cancel
-                    </button>
-                    <button id="save-stock-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
-                        Add Item
-                    </button>
+            </div>
+            <!-- Row 2: Vehicle Type and Vehicle Model -->
+            <div class="flex flex-col sm:flex-row sm:space-x-3">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Type</label>
+                    <select id="stock-vehicle-type" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select type</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Vehicle Model</label>
+                    <select id="stock-vehicle-model" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select model</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Row 3: Quantity and Purchase Price -->
+            <div class="flex flex-col sm:flex-row sm:space-x-3">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Quantity *</label>
+                    <input
+                        type="number"
+                        id="stock-quantity"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="0"
+                        min="0"
+                    />
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Purchase Price (NPR) *</label>
+                    <input
+                        type="number"
+                        id="stock-purchase-price"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0"
+                    />
+                </div>
+            </div>
+            <!-- Row 4: Selling Price and Image -->
+            <div class="flex flex-col sm:flex-row sm:space-x-3">
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Selling Price (NPR) *</label>
+                    <input
+                        type="number"
+                        id="stock-selling-price"
+                        class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0"
+                    />
+                </div>
+                <div class="flex-1">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Image</label>
+                    <input type="file" id="stock-image" accept="image/*" class="w-full border border-gray-300 rounded-md px-2 py-1 text-xs">
+                    <img id="stock-image-preview" src="" alt="Preview" class="w-16 h-16 mt-2 rounded object-cover border hidden">
                 </div>
             </div>
         </div>
+        <div class="sticky bottom-0 bg-gray-50 px-4 py-2 flex space-x-2">
+            <button id="cancel-stock-btn" class="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                Cancel
+            </button>
+            <button id="save-stock-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1.5 px-2 rounded-md text-xs font-medium transition-colors duration-200">
+                Add Item
+            </button>
+        </div>
+    </div>
+</div>
 
         <!-- Supplier Payment Modal -->
         <div id="supplier-payment-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
@@ -856,19 +1019,33 @@ function renderPurchaseItems() {
 }
 
 // Helper functions (unchanged)
-function getStatusColor(status) {
-    switch (status) {
-        case 'active':
-        case 'in-stock': return 'bg-green-100 text-green-800';
-        case 'low-stock': return 'bg-yellow-100 text-yellow-800';
-        case 'partially_paid': return 'bg-orange-100 text-orange-800';
-        case 'out-of-stock':
-        case 'inactive': return 'bg-gray-100 text-gray-800';
-        case 'pending': return 'bg-blue-100 text-blue-800';
-        case 'paid': return 'bg-green-100 text-green-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-}
+        function getStatusColor(status) {
+            switch (status) {
+                case 'active':
+                case 'in-stock': return 'bg-green-100 text-green-800';
+                case 'low-stock': return 'bg-yellow-100 text-yellow-800';
+                case 'partially_paid': return 'bg-orange-100 text-orange-800';
+                case 'out-of-stock':
+                case 'inactive': return 'bg-gray-100 text-gray-800';
+                case 'pending': return 'bg-blue-100 text-blue-800';
+                case 'paid': return 'bg-green-100 text-green-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        async function fetchSupplierDetails(supplierId) {
+            try {
+                const response = await fetch(`/admin/get-supplier-details/${supplierId}/`, {
+                    headers: { 'X-CSRFToken': getCsrfToken() }
+                });
+                if (!response.ok) throw new Error('Failed to fetch supplier details');
+                return await response.json();
+            } catch (error) {
+                showToast('Error fetching supplier details: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
 
 function getMovementIcon(movement) {
     switch (movement) {
@@ -1201,17 +1378,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Stock modal
     document.getElementById('add-stock-btn').addEventListener('click', () => {
         document.getElementById('stock-modal-title').textContent = 'Add New Stock Item';
-        document.getElementById('stock-code').value = '';
         document.getElementById('stock-name').value = '';
-        document.getElementById('stock-category').value = '';
         document.getElementById('stock-vehicle-company').value = '';
         document.getElementById('stock-vehicle-type').value = '';
         document.getElementById('stock-vehicle-model').value = '';
         document.getElementById('stock-quantity').value = '';
-        document.getElementById('stock-min').value = '5';
         document.getElementById('stock-purchase-price').value = '';
         document.getElementById('stock-selling-price').value = '';
-        document.getElementById('stock-supplier').value = '';
+        document.getElementById('stock-image').value = ''; // Clear file input
+        document.getElementById('stock-image-preview').src = ''; // Clear image preview
+        document.getElementById('stock-image-preview').classList.add('hidden');
         delete document.getElementById('save-stock-btn').dataset.id;
         document.getElementById('add-stock-modal').classList.remove('hidden');
     });
@@ -1225,45 +1401,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('save-stock-btn').addEventListener('click', async () => {
-        const stockData = {
-            id: document.getElementById('save-stock-btn').dataset.id,
-            code: document.getElementById('stock-code').value,
-            name: document.getElementById('stock-name').value,
-            category: document.getElementById('stock-category').value,
-            vehicleCompany: document.getElementById('stock-vehicle-company').value,
-            vehicleType: document.getElementById('stock-vehicle-type').value,
-            vehicleModel: document.getElementById('stock-vehicle-model').value,
-            quantity: parseInt(document.getElementById('stock-quantity').value) || 0,
-            minStock: parseInt(document.getElementById('stock-min').value) || 5,
-            purchasePrice: parseFloat(document.getElementById('stock-purchase-price').value) || 0,
-            sellingPrice: parseFloat(document.getElementById('stock-selling-price').value) || 0,
-            supplier: document.getElementById('stock-supplier').value
-        };
-        if (!stockData.code || !stockData.name || !stockData.category || stockData.quantity < 0 || stockData.purchasePrice < 0 || stockData.sellingPrice < 0) {
-            showToast('Please fill all required fields with valid values', 'error');
-            return;
+    const stockData = {
+        id: document.getElementById('save-stock-btn').dataset.id,
+        name: document.getElementById('stock-name').value.trim(),
+        vehicleCompany: document.getElementById('stock-vehicle-company').value,
+        vehicleType: document.getElementById('stock-vehicle-type').value,
+        vehicleModel: document.getElementById('stock-vehicle-model').value,
+        quantity: parseInt(document.getElementById('stock-quantity').value) || 0,
+        purchasePrice: parseFloat(document.getElementById('stock-purchase-price').value) || 0,
+        sellingPrice: parseFloat(document.getElementById('stock-selling-price').value) || 0
+    };
+    // Client-side validation
+    if (!stockData.name || stockData.quantity < 0 || stockData.purchasePrice < 0 || stockData.sellingPrice < 0) {
+        showToast('Please fill all required fields with valid values', 'error');
+        return;
+    }
+
+    const imageInput = document.getElementById('stock-image');
+    const file = imageInput.files[0];
+    let formData;
+    let useFormData = !!file;
+    if (useFormData) {
+        formData = new FormData();
+        formData.append('id', stockData.id || '');
+        formData.append('name', stockData.name);
+        formData.append('vehicleCompany', stockData.vehicleCompany);
+        formData.append('vehicleType', stockData.vehicleType);
+        formData.append('vehicleModel', stockData.vehicleModel);
+        formData.append('quantity', stockData.quantity);
+        formData.append('purchasePrice', stockData.purchasePrice);
+        formData.append('sellingPrice', stockData.sellingPrice);
+        formData.append('image', file);
+    }
+    try {
+        const response = await fetch('/admin/save-inventory/', {
+            method: 'POST',
+            headers: useFormData ? { 'X-CSRFToken': getCsrfToken() } : {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken()
+            },
+            body: useFormData ? formData : JSON.stringify(stockData)
+        });
+        const result = await response.json();
+        if (response.ok) {
+            showToast(result.message, 'success');
+            document.getElementById('add-stock-modal').classList.add('hidden');
+            renderInventory();
+        } else {
+            showToast(result.error, 'error');
         }
-        try {
-            const response = await fetch('/admin/save-inventory/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCsrfToken()
-                },
-                body: JSON.stringify(stockData)
-            });
-            const result = await response.json();
-            if (response.ok) {
-                showToast(result.message, 'success');
-                document.getElementById('add-stock-modal').classList.add('hidden');
-                renderInventory();
-            } else {
-                showToast(result.error, 'error');
-            }
-        } catch (error) {
-            showToast('Error saving stock item: ' + error.message, 'error');
-        }
-    });
+    } catch (error) {
+        showToast('Error saving stock item: ' + error.message, 'error');
+    }
+});
 
     // Supplier payment modal
     document.getElementById('close-payment-modal').addEventListener('click', () => {
@@ -1280,12 +1470,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             purchaseOrderId: document.getElementById('payment-purchase-order').value,
             amount: parseFloat(document.getElementById('payment-amount').value) || 0
         };
-        if (paymentData.amount <= 0) {
+        if (paymentData.amount <= 0) {  
             showToast('Please enter a valid payment amount', 'error');
             return;
         }
         try {
-            const response = await fetch('/admin/make-payment/', {
+            const response = await fetch('/admin/make-supplier-payment/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1324,70 +1514,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-// Other functions (renderSuppliers, renderPurchaseOrders, renderInventory, etc.) remain unchanged
-async function renderSuppliers(searchTerm = '') {
-    try {
-        const data = await fetchSuppliers(searchTerm, currentSupplierPage);
-        const suppliersGrid = document.getElementById('suppliers-grid');
-        suppliersGrid.innerHTML = data.suppliers.map(supplier => `
-            <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
-                <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center space-x-2">
-                        <div class="bg-blue-100 rounded-full p-2">
-                            <i class="fas fa-building w-4 h-4 text-blue-600"></i>
+        // Update renderSuppliers to include View Details button
+        async function renderSuppliers(searchTerm = '') {
+            try {
+                const data = await fetchSuppliers(searchTerm, currentSupplierPage);
+                const suppliersGrid = document.getElementById('suppliers-grid');
+                suppliersGrid.innerHTML = data.suppliers.map(supplier => `
+                    <div class="bg-white rounded-md shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow duration-200">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <div class="bg-blue-100 rounded-full p-2">
+                                    <i class="fas fa-building w-4 h-4 text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-xs font-semibold text-gray-900">${supplier.name}</h3>
+                                    <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">${supplier.category}</span>
+                                </div>
+                            </div>
+                            <span class="px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(supplier.status)}">${supplier.status.toUpperCase()}</span>
                         </div>
-                        <div>
-                            <h3 class="text-xs font-semibold text-gray-900">${supplier.name}</h3>
-                            <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">${supplier.category}</span>
+                        <div class="space-y-1 mb-2">
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-phone w-3 h-3 text-gray-400"></i>
+                                <span class="text-xs text-gray-600">${supplier.phone}</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-envelope w-3 h-3 text-gray-400"></i>
+                                <span class="text-xs text-gray-600">${supplier.email || '-'}</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <i class="fas fa-map-marker-alt w-3 h-3 text-gray-400"></i>
+                                <span class="text-xs text-gray-600">${supplier.address || '-'}</span>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 rounded-md p-2 mb-2">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-medium text-gray-700">Credit Utilization</span>
+                                <span class="text-xs text-gray-600">NPR ${supplier.currentCredit.toLocaleString()} / NPR ${supplier.creditLimit.toLocaleString()}</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-1.5">
+                                <div class="h-1.5 rounded-full ${getCreditUtilization(supplier.currentCredit, supplier.creditLimit) > 80 ? 'bg-red-500' : getCreditUtilization(supplier.currentCredit, supplier.creditLimit) > 60 ? 'bg-yellow-500' : 'bg-green-500'}" style="width: ${getCreditUtilization(supplier.currentCredit, supplier.creditLimit)}%"></div>
+                            </div>
+                            <div class="flex justify-between items-center mt-1 text-xs text-gray-500">
+                                <span>Payment Terms: ${supplier.paymentTerms}</span>
+                                <span>${getCreditUtilization(supplier.currentCredit, supplier.creditLimit)}% used</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="purchase-btn flex-1 bg-green-600 hover:bg-green-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
+                                <i class="fas fa-box w-3 h-3"></i>
+                                <span>Purchase</span>
+                            </button>
+                            <button class="edit-supplier-btn flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
+                                <i class="fas fa-edit w-3 h-3"></i>
+                                <span>Edit</span>
+                            </button>
+                            ${supplier.currentCredit > 0 ? `
+                            <button class="pay-now-btn flex-1 bg-orange-600 hover:bg-orange-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
+                                <i class="fas fa-money-bill w-3 h-3"></i>
+                                <span>Pay Now</span>
+                            </button>` : ''}
+                            <button class="view-details-btn flex-1 bg-blue-600 hover:bg-blue-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
+                                <i class="fas fa-eye w-3 h-3"></i>
+                                <span>View Details</span>
+                            </button>
                         </div>
                     </div>
-                    <span class="px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(supplier.status)}">${supplier.status.toUpperCase()}</span>
-                </div>
-                <div class="space-y-1 mb-2">
-                    <div class="flex items-center space-x-1">
-                        <i class="fas fa-phone w-3 h-3 text-gray-400"></i>
-                        <span class="text-xs text-gray-600">${supplier.phone}</span>
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <i class="fas fa-envelope w-3 h-3 text-gray-400"></i>
-                        <span class="text-xs text-gray-600">${supplier.email || '-'}</span>
-                    </div>
-                    <div class="flex items-center space-x-1">
-                        <i class="fas fa-map-marker-alt w-3 h-3 text-gray-400"></i>
-                        <span class="text-xs text-gray-600">${supplier.address || '-'}</span>
-                    </div>
-                </div>
-                <div class="bg-gray-50 rounded-md p-2 mb-2">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="text-xs font-medium text-gray-700">Credit Utilization</span>
-                        <span class="text-xs text-gray-600">NPR ${supplier.currentCredit.toLocaleString()} / NPR ${supplier.creditLimit.toLocaleString()}</span>
-                    </div>
-                    <div class="w-full bg-gray-200 rounded-full h-1.5">
-                        <div class="h-1.5 rounded-full ${getCreditUtilization(supplier.currentCredit, supplier.creditLimit) > 80 ? 'bg-red-500' : getCreditUtilization(supplier.currentCredit, supplier.creditLimit) > 60 ? 'bg-yellow-500' : 'bg-green-500'}" style="width: ${getCreditUtilization(supplier.currentCredit, supplier.creditLimit)}%"></div>
-                    </div>
-                    <div class="flex justify-between items-center mt-1 text-xs text-gray-500">
-                        <span>Payment Terms: ${supplier.paymentTerms}</span>
-                        <span>${getCreditUtilization(supplier.currentCredit, supplier.creditLimit)}% used</span>
-                    </div>
-                </div>
-                <div class="flex space-x-2">
-                    <button class="purchase-btn flex-1 bg-green-600 hover:bg-green-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
-                        <i class="fas fa-box w-3 h-3"></i>
-                        <span>Purchase</span>
-                    </button>
-                    <button class="edit-supplier-btn flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
-                        <i class="fas fa-edit w-3 h-3"></i>
-                        <span>Edit</span>
-                    </button>
-                    ${supplier.currentCredit > 0 ? `
-                    <button class="pay-now-btn flex-1 bg-orange-600 hover:bg-orange-700 text-white py-1 px-2 rounded-md text-xs font-medium transition-colors duration-200 flex items-center justify-center space-x-1" data-id="${supplier.id}">
-                        <i class="fas fa-money-bill w-3 h-3"></i>
-                        <span>Pay Now</span>
-                    </button>` : ''}
-                </div>
-            </div>
-        `).join('');
-        renderPagination('suppliers-pagination', currentSupplierPage, data.total_pages);
+                `).join('');
+                renderPagination('suppliers-pagination', currentSupplierPage, data.total_pages);
 
         // Update supplier stats
         const totalSuppliers = data.suppliers.length + ((data.total_pages - 1) * 9); // Assuming 9 per page
@@ -1415,42 +1609,129 @@ async function renderSuppliers(searchTerm = '') {
             });
         });
 
-        document.querySelectorAll('.edit-supplier-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const supplier = data.suppliers.find(s => s.id == btn.dataset.id);
-                document.getElementById('supplier-modal-title').textContent = `Edit Supplier - ${supplier.name}`;
-                document.getElementById('supplier-name').value = supplier.name;
-                document.getElementById('contact-person').value = supplier.contactPerson || '';
-                document.getElementById('supplier-phone').value = supplier.phone;
-                document.getElementById('supplier-email').value = supplier.email || '';
-                document.getElementById('supplier-address').value = supplier.address || '';
-                document.getElementById('supplier-vat').value = supplier.vat || '';
-                document.getElementById('supplier-category').value = supplier.category;
-                document.getElementById('credit-limit').value = supplier.creditLimit;
-                document.getElementById('payment-terms').value = supplier.paymentTerms;
-                document.getElementById('save-supplier-btn').dataset.id = supplier.id;
-                document.getElementById('add-supplier-modal').classList.remove('hidden');
-            });
-        });
+                document.querySelectorAll('.edit-supplier-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const supplier = data.suppliers.find(s => s.id == btn.dataset.id);
+                        document.getElementById('supplier-modal-title').textContent = `Edit Supplier - ${supplier.name}`;
+                        document.getElementById('supplier-name').value = supplier.name;
+                        document.getElementById('contact-person').value = supplier.contactPerson || '';
+                        document.getElementById('supplier-phone').value = supplier.phone;
+                        document.getElementById('supplier-email').value = supplier.email || '';
+                        document.getElementById('supplier-address').value = supplier.address || '';
+                        document.getElementById('supplier-vat').value = supplier.vat || '';
+                        document.getElementById('supplier-category').value = supplier.category;
+                        document.getElementById('credit-limit').value = supplier.creditLimit;
+                        document.getElementById('payment-terms').value = supplier.paymentTerms;
+                        document.getElementById('save-supplier-btn').dataset.id = supplier.id;
+                        document.getElementById('add-supplier-modal').classList.remove('hidden');
+                    });
+                });
 
-        document.querySelectorAll('.pay-now-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const supplier = data.suppliers.find(s => s.id == btn.dataset.id);
-                document.getElementById('payment-supplier-name').value = supplier.name;
-                document.getElementById('payment-supplier-id').value = supplier.id;
-                document.getElementById('payment-current-credit').value = `NPR ${supplier.currentCredit.toLocaleString()}`;
-                document.getElementById('payment-amount').value = '';
-                const poResponse = await fetchPurchaseOrders();
-                const purchaseOrders = poResponse.purchase_orders.filter(po => po.supplier === supplier.name && po.status !== 'paid');
-                const poSelect = document.getElementById('payment-purchase-order');
-                poSelect.innerHTML = '<option value="">Select purchase order</option>' + purchaseOrders.map(po => `<option value="${po.id}">${po.purchaseNo} (NPR ${po.amount.toLocaleString()})</option>`).join('');
-                document.getElementById('supplier-payment-modal').classList.remove('hidden');
-            });
-        });
-    } catch (error) {
-        alert('Error loading suppliers: ' + error.message);
-    }
-}
+                 document.querySelectorAll('.pay-now-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const supplier = data.suppliers.find(s => s.id == btn.dataset.id);
+                        document.getElementById('payment-supplier-name').value = supplier.name;
+                        document.getElementById('payment-supplier-id').value = supplier.id;
+                        document.getElementById('payment-current-credit').value = `NPR ${supplier.currentCredit.toLocaleString()}`;
+                        document.getElementById('payment-amount').value = '';
+                        const poResponse = await fetchPurchaseOrders();
+                        const purchaseOrders = poResponse.purchase_orders.filter(po => po.supplier === supplier.name && po.status !== 'paid');
+                        const poSelect = document.getElementById('payment-purchase-order');
+                        poSelect.innerHTML = '<option value="">Select purchase order</option>' + purchaseOrders.map(po => `<option value="${po.id}">${po.purchaseNo} (NPR ${po.amount.toLocaleString()})</option>`).join('');
+                        document.getElementById('supplier-payment-modal').classList.remove('hidden');
+                    });
+                });
+                
+                // Add event listener for View Details button
+                document.querySelectorAll('.view-details-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        try {
+                            const supplierData = await fetchSupplierDetails(btn.dataset.id);
+                            // Populate supplier details
+                            document.getElementById('supplier-details-title').textContent = `Supplier Details - ${supplierData.supplier.name}`;
+                            document.getElementById('supplier-details-name').textContent = supplierData.supplier.name;
+                            document.getElementById('supplier-details-contact').textContent = supplierData.supplier.contact_person || '-';
+                            document.getElementById('supplier-details-phone').textContent = supplierData.supplier.phone;
+                            document.getElementById('supplier-details-email').textContent = supplierData.supplier.email || '-';
+                            document.getElementById('supplier-details-address').textContent = supplierData.supplier.address || '-';
+                            document.getElementById('supplier-details-vat').textContent = supplierData.supplier.vat_number || '-';
+                            document.getElementById('supplier-details-category').textContent = supplierData.supplier.category;
+                            document.getElementById('supplier-details-total-purchases').textContent = `NPR ${supplierData.summary.total_purchases.toLocaleString()}`;
+                            document.getElementById('supplier-details-total-paid').textContent = `NPR ${supplierData.summary.total_paid.toLocaleString()}`;
+                            document.getElementById('supplier-details-outstanding').textContent = `NPR ${supplierData.summary.outstanding_balance.toLocaleString()}`;
+                            document.getElementById('supplier-details-total-orders').textContent = supplierData.summary.total_orders;
+                            document.getElementById('supplier-details-credit-limit').textContent = `NPR ${supplierData.supplier.credit_limit.toLocaleString()}`;
+                            document.getElementById('supplier-details-current-credit').textContent = `NPR ${supplierData.supplier.current_credit.toLocaleString()}`;
+                            document.getElementById('supplier-details-payment-terms').textContent = supplierData.supplier.payment_terms;
+                            document.getElementById('supplier-details-last-purchase').textContent = supplierData.supplier.last_purchase || '-';
+
+                            // Populate purchase history
+                            const purchaseHistory = document.getElementById('supplier-purchase-history');
+                            purchaseHistory.innerHTML = supplierData.purchase_orders.map(po => `
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-3 py-1 text-xs text-gray-600">${po.purchase_no}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${po.date}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">NPR ${po.subtotal.toLocaleString()}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">NPR ${po.tax.toLocaleString()}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">NPR ${po.total.toLocaleString()}</td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${po.payment_mode}</td>
+                                    <td class="px-3 py-1">
+                                        <span class="inline-block px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(po.status)}">${po.status.replace('_', ' ').toUpperCase()}</span>
+                                    </td>
+                                    <td class="px-3 py-1 text-xs text-gray-600">${po.due_date || '-'}</td>
+                                    <td class="px-3 py-1">
+                                        <button class="view-po-details-btn text-blue-600 hover:text-blue-700 text-xs" data-id="${po.id}">
+                                            <i class="fas fa-eye w-3 h-3"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `).join('');
+
+                            // Add event listeners for View PO Details buttons in history
+                            document.querySelectorAll('.view-po-details-btn').forEach(btn => {
+                                btn.addEventListener('click', () => {
+                                    const po = supplierData.purchase_orders.find(p => p.id == btn.dataset.id);
+                                    // Populate PO details modal
+                                    document.getElementById('purchase-order-details-title').textContent = `Purchase Order Details - ${po.purchase_no}`;
+                                    document.getElementById('po-details-number').textContent = po.purchase_no;
+                                    document.getElementById('po-details-supplier').textContent = supplierData.supplier.name;
+                                    document.getElementById('po-details-date').textContent = po.date;
+                                    document.getElementById('po-details-payment-mode').textContent = po.payment_mode;
+                                    document.getElementById('po-details-status').textContent = po.status.replace('_', ' ').toUpperCase();
+                                    document.getElementById('po-details-due-date').textContent = po.due_date || '-';
+                                    document.getElementById('po-details-subtotal').textContent = `NPR ${po.subtotal.toLocaleString()}`;
+                                    document.getElementById('po-details-tax').textContent = `NPR ${po.tax.toLocaleString()}`;
+                                    document.getElementById('po-details-total').textContent = `NPR ${po.total.toLocaleString()}`;
+                                    document.getElementById('po-details-items').innerHTML = po.items.map(item => `
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-3 py-1 text-xs text-gray-600">${item.name}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${item.code}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">
+                                                ${item.vehicle_company ? `Company: ${item.vehicle_company}<br>` : ''}
+                                                ${item.vehicle_type ? `Type: ${item.vehicle_type}<br>` : ''}
+                                                ${item.vehicle_model ? `Model: ${item.vehicle_model}` : ''}
+                                            </td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">${item.quantity}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">NPR ${item.rate.toLocaleString()}</td>
+                                            <td class="px-3 py-1 text-xs text-gray-600">NPR ${item.amount.toLocaleString()}</td>
+                                        </tr>
+                                    `).join('');
+                                    document.getElementById('purchase-order-details-modal').classList.remove('hidden');
+                                });
+                            });
+
+                            document.getElementById('supplier-details-modal').classList.remove('hidden');
+                        } catch (error) {
+                            // Error already handled by fetchSupplierDetails
+                        }
+                    });
+                });
+            } catch (error) {
+                alert('Error loading suppliers: ' + error.message);
+            }
+        }
+
+
 
 async function renderPurchaseOrders() {
     try {
@@ -1468,7 +1749,7 @@ async function renderPurchaseOrders() {
                 </td>
                 <td class="px-4 py-1.5 text-xs text-gray-600">${po.dueDate || '-'}</td>
                 <td class="px-4 py-1.5">
-                    <button class="view-po-btn text-blue-600 hover:text-blue-700 text-xs" data-id="${po.id}">
+                    <button class="  view-po-btn text-blue-600 hover:text-blue-700 text-xs" data-id="${po.id}" data-supplier-id="${po.supplierId}">
                         <i class="fas fa-eye w-3 h-3"></i>
                     </button>
                 </td>
@@ -1477,13 +1758,57 @@ async function renderPurchaseOrders() {
         renderPagination('purchase-orders-pagination', currentPurchasePage, data.total_pages);
 
         document.querySelectorAll('.view-po-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const po = data.purchase_orders.find(p => p.id == btn.dataset.id);
-                alert(`Purchase Order Details:\n\nPO Number: ${po.purchaseNo}\nSupplier: ${po.supplier}\nItems:\n${po.items.map(item => `- ${item.name} (${item.quantity} x NPR ${item.rate.toLocaleString()} = NPR ${item.amount.toLocaleString()})`).join('\n')}`);
+            btn.addEventListener('click', async () => {
+                try {
+                    const poId = btn.dataset.id;
+                    const supplierId = btn.dataset.supplierId;
+                    if (!supplierId) {
+                        throw new Error('Supplier ID not found for this purchase order');
+                    }
+                    const po = data.purchase_orders.find(p => p.id == poId);
+                    if (!po) {
+                        throw new Error('Purchase order not found in current data');
+                    }
+                    // Fetch full supplier details including purchase orders
+                    const supplierData = await fetchSupplierDetails(supplierId);
+                    const fullPo = supplierData.purchase_orders.find(p => p.id == poId);
+                    if (!fullPo) {
+                        throw new Error('Purchase order details not found');
+                    }
+
+                    // Populate PO details modal
+                    document.getElementById('purchase-order-details-title').textContent = `Purchase Order Details - ${po.purchaseNo}`;
+                    document.getElementById('po-details-number').textContent = po.purchaseNo;
+                    document.getElementById('po-details-supplier').textContent = po.supplier;
+                    document.getElementById('po-details-date').textContent = po.date;
+                    document.getElementById('po-details-payment-mode').textContent = po.paymentMode;
+                    document.getElementById('po-details-status').textContent = po.status.replace('_', ' ').toUpperCase();
+                    document.getElementById('po-details-due-date').textContent = po.dueDate || '-';
+                    document.getElementById('po-details-subtotal').textContent = `NPR ${fullPo.subtotal.toLocaleString()}`;
+                    document.getElementById('po-details-tax').textContent = `NPR ${fullPo.tax.toLocaleString()}`;
+                    document.getElementById('po-details-total').textContent = `NPR ${fullPo.total.toLocaleString()}`;
+                    document.getElementById('po-details-items').innerHTML = fullPo.items.map(item => `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 py-1 text-xs text-gray-600">${item.name}</td>
+                            <td class="px-3 py-1 text-xs text-gray-600">${item.code}</td>
+                            <td class="px-3 py-1 text-xs text-gray-600">
+                                ${item.vehicle_company ? `Company: ${item.vehicle_company}<br>` : ''}
+                                ${item.vehicle_type ? `Type: ${item.vehicle_type}<br>` : ''}
+                                ${item.vehicle_model ? `Model: ${item.vehicle_model}` : ''}
+                            </td>
+                            <td class="px-3 py-1 text-xs text-gray-600">${item.quantity}</td>
+                            <td class="px-3 py-1 text-xs text-gray-600">NPR ${item.rate.toLocaleString()}</td>
+                            <td class="px-3 py-1 text-xs text-gray-600">NPR ${item.amount.toLocaleString()}</td>
+                        </tr>
+                    `).join('');
+                    document.getElementById('purchase-order-details-modal').classList.remove('hidden');
+                } catch (error) {
+                    showToast('Error loading purchase order details: ' + error.message, 'error');
+                }
             });
         });
     } catch (error) {
-        alert('Error loading purchase orders: ' + error.message);
+        showToast('Error loading purchase orders: ' + error.message, 'error');
     }
 }
 
@@ -1494,9 +1819,14 @@ async function renderInventory(searchTerm = '', category = 'all') {
         inventoryTable.innerHTML = data.parts.map(part => `
             <tr class="hover:bg-gray-50">
                 <td class="px-4 py-1.5">
-                    <div class="text-xs font-semibold text-gray-900">${part.name}</div>
-                    <div class="text-xs text-gray-600">${part.code}</div>
-                    ${part.supplier ? `<div class="text-xs text-gray-500">Supplier: ${part.supplier}</div>` : ''}
+                    <div class="flex items-center space-x-2">
+                        <img src="${part.image || '/static/img/placeholder.png'}" alt="Part Image" class="w-10 h-10 rounded object-cover border" id="part-img-${part.id}">
+                        <div>
+                            <div class="text-xs font-semibold text-gray-900">${part.name}</div>
+                            <div class="text-xs text-gray-600">${part.code}</div>
+                            ${part.supplier ? `<div class="text-xs text-gray-500">Supplier: ${part.supplier}</div>` : ''}
+                        </div>
+                    </div>
                 </td>
                 <td class="px-4 py-1.5 text-xs text-gray-600">${part.category}</td>
                 <td class="px-4 py-1.5 text-xs text-gray-600">
@@ -1520,6 +1850,10 @@ async function renderInventory(searchTerm = '', category = 'all') {
                     <button class="edit-stock-btn text-blue-600 hover:text-blue-700 text-xs" data-id="${part.id}">
                         <i class="fas fa-edit w-3 h-3"></i>
                     </button>
+                    <label class="upload-img-btn cursor-pointer text-gray-500 hover:text-blue-600 ml-2" title="Upload image">
+                        <i class="fas fa-upload w-3 h-3"></i>
+                        <input type="file" accept="image/*" style="display:none" data-id="${part.id}" class="upload-img-input">
+                    </label>
                 </td>
             </tr>
         `).join('');
@@ -1551,7 +1885,6 @@ async function renderInventory(searchTerm = '', category = 'all') {
                 document.getElementById('stock-modal-title').textContent = `Edit Stock Item - ${part.name}`;
                 document.getElementById('stock-code').value = part.code;
                 document.getElementById('stock-name').value = part.name;
-                document.getElementById('stock-category').value = part.category;
                 document.getElementById('stock-vehicle-company').value = part.vehicle_company || '';
                 document.getElementById('stock-vehicle-type').value = part.vehicle_type || '';
                 document.getElementById('stock-vehicle-model').value = part.vehicle_model || '';
@@ -1559,16 +1892,86 @@ async function renderInventory(searchTerm = '', category = 'all') {
                 document.getElementById('stock-min').value = part.minStock;
                 document.getElementById('stock-purchase-price').value = part.purchasePrice;
                 document.getElementById('stock-selling-price').value = part.sellingPrice;
-                document.getElementById('stock-supplier').value = part.supplier || '';
                 document.getElementById('save-stock-btn').dataset.id = part.id;
                 document.getElementById('add-stock-modal').classList.remove('hidden');
             });
         });
-    } catch (error) {
-        alert('Error loading inventory: ' + error.message);
-    }
-}
+        document.querySelectorAll('.upload-img-input').forEach(input => {
+            input.addEventListener('change', async function(e) {
+                const partId = this.dataset.id;
+                console.log('Uploading image for partId:', partId);
+                const file = this.files[0];
+                if (!file) {
+                    console.log('No file selected');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('id', partId);
+                formData.append('image', file);
+                // Debug FormData contents
+                for (let pair of formData.entries()) {
+                    console.log(`FormData: ${pair[0]} = ${pair[1]}`);
+                }
+                try {
+                    const response = await fetch('/admin/upload-part-image/', {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'X-CSRFToken': getCsrfToken() }
+                    });
+                    const result = await response.json();
+                    console.log('Server response:', result); // Log the response
+                    if (response.ok) {
+                        showToast(result.message || 'Image uploaded successfully', 'success');
+                        const imgElem = document.getElementById(`part-img-${partId}`);
+                        if (imgElem && result.image) {
+                            imgElem.src = result.image + '?t=' + Date.now();
+                        }
+                    } else {
+                        showToast(result.error || 'Image upload failed', 'error');
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    showToast('Image upload failed: ' + err.message, 'error');
+                }
+            });
+        });
+            } catch (error) {
+                alert('Error loading inventory: ' + error.message);
+            }
+        }
+
+
+       
+         // Event listeners for modal close buttons
+        document.getElementById('close-supplier-details-modal').addEventListener('click', () => {
+            document.getElementById('supplier-details-modal').classList.add('hidden');
+        });
+
+        document.getElementById('close-supplier-details-btn').addEventListener('click', () => {
+            document.getElementById('supplier-details-modal').classList.add('hidden');
+        });
+
+        document.getElementById('close-purchase-order-details-modal').addEventListener('click', () => {
+            document.getElementById('purchase-order-details-modal').classList.add('hidden');
+        });
+
+        document.getElementById('close-po-details-btn').addEventListener('click', () => {
+            document.getElementById('purchase-order-details-modal').classList.add('hidden');
+        });
+
+
+        document.getElementById('stock-image').addEventListener('change', function() {
+            const file = this.files[0];
+            const preview = document.getElementById('stock-image-preview');
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('hidden');
+            } else {
+                preview.src = '';
+                preview.classList.add('hidden');
+            }
+        });
 </script>
-    </body>
+</body>
 </html>
 {% endblock %}

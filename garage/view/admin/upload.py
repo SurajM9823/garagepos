@@ -26,8 +26,17 @@ def get_companies(request):
 
 @login_required
 def get_vehicle_types(request):
-    page = int(request.GET.get('page', 1))
+    page_str = request.GET.get('page', '1')  # Default to '1' as a string
     per_page = int(request.GET.get('per_page', 5))
+
+    # Validate page parameter
+    try:
+        page = int(page_str)
+        if page < 1:
+            page = 1  # Ensure page is at least 1
+    except (ValueError, TypeError):
+        page = 1  # Fallback to page 1 if invalid
+
     vehicle_types = VehicleType.objects.filter(client_garage=request.user.client_garage)
     paginator = Paginator(vehicle_types, per_page)
     page_obj = paginator.get_page(page)

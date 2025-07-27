@@ -87,7 +87,7 @@
         .container input {
             background-color: #cccccc;
             border: none;
-            padding: 10px 40px 10px 40px; /* Adjusted padding for both icons */
+            padding: 10px 40px 10px 40px;
             font-size: 13px;
             border-radius: 0px;
             width: 100%;
@@ -181,13 +181,54 @@
             margin-top: 10px;
             font-size: 13px;
         }
+        .loader-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .loader-content {
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+            text-align: center;
+        }
+        .bike-icon {
+            font-size: 50px;
+            color: #ffffff;
+            position: absolute;
+            top: -60px;
+            left: 0;
+            transform: translateX(0);
+            transition: transform 0.05s linear;
+        }
+        .progress-bar {
+            width: 80%;
+            height: 20px;
+            background: #cccccc;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #bebd00;
+            width: 0%;
+            transition: width 0.05s linear;
+        }
     </style>
 </head>
 <body>
     <div class="container" id="container">
         <div class="form-container sign-in">
             <form id="loginForm">
-                <h1>Login </h1>
+                <h1>Login</h1>
                 <hr>
                 <span>Login With Your Username & Password</span>
                 <div class="input-container">
@@ -213,88 +254,135 @@
             </div>
         </div>
     </div>
+    <div class="loader-container" id="loaderContainer">
+        <div class="loader-content">
+            <i class="fas fa-motorcycle bike-icon" id="bikeIcon"></i>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginForm = document.getElementById('loginForm');
+            const errorMessageDiv = document.getElementById('errorMessage');
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = loginForm.elements.password;
+            const loaderContainer = document.getElementById('loaderContainer');
+            const progressFill = document.getElementById('progressFill');
+            const bikeIcon = document.getElementById('bikeIcon');
 
-   <!-- Replace the togglePassword event listener in the JavaScript -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const loginForm = document.getElementById('loginForm');
-        const errorMessageDiv = document.getElementById('errorMessage');
-        const togglePassword = document.getElementById('togglePassword');
-        const passwordInput = loginForm.elements.password;
-
-        // REFINED getCsrfToken function (unchanged)
-        function getCsrfToken() {
-            const metaTag = document.querySelector('meta[name="csrf-token"]');
-            if (metaTag) {
-                return metaTag.getAttribute('content');
+            function showLoader() {
+                loaderContainer.style.display = 'flex';
+                let progress = 0;
+                const animationDuration = 2000; // 2 seconds minimum animation time
+                const increment = 100 / (animationDuration / 50); // Reach 100% in 2 seconds
+                progressFill.style.width = '0%';
+                bikeIcon.style.transform = 'translateX(0)';
+                const progressInterval = setInterval(() => {
+                    progress += increment;
+                    if (progress > 100) progress = 100; // Cap at 100%
+                    progressFill.style.width = `${progress}%`;
+                    bikeIcon.style.transform = `translateX(${progress * 4.8}px)`; // 80% of 600px = 480px
+                }, 50);
+                return { interval: progressInterval, startTime: Date.now() };
             }
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
-                        break;
+
+            async function hideLoader(loaderData, callback) {
+                const { interval, startTime } = loaderData;
+                const elapsed = Date.now() - startTime;
+                const minDuration = 2000; // Ensure loader shows for at least 2 seconds
+                const remainingTime = minDuration - elapsed;
+
+                if (remainingTime > 0) {
+                    await new Promise(resolve => setTimeout(resolve, remainingTime));
+                }
+
+                clearInterval(interval);
+                progressFill.style.width = '100%'; // Ensure progress bar is full
+                bikeIcon.style.transform = 'translateX(480px)'; // Ensure bike is at end
+                await new Promise(resolve => setTimeout(resolve, 100)); // Brief pause to show 100%
+                loaderContainer.style.display = 'none';
+                if (callback) callback(); // Execute redirect or other callback
+            }
+
+            function getCsrfToken() {
+                const metaTag = document.querySelector('meta[name="csrf-token"]');
+                if (metaTag) {
+                    return metaTag.getAttribute('content');
+                }
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, 'csrftoken'.length + 1) === ('csrftoken' + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring('csrftoken'.length + 1));
+                            break;
+                        }
                     }
                 }
-            }
-            return cookieValue;
-        }
-
-        togglePassword.addEventListener('click', function() {
-            const type = passwordInput.getAttribute('type') === 'text' ? 'password' : 'text';
-            passwordInput.setAttribute('type', type);
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
-        });
-
-        // Rest of the JavaScript (loginForm event listener) remains unchanged
-        loginForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            errorMessageDiv.textContent = '';
-
-            const username = loginForm.elements.username.value;
-            const password = loginForm.elements.password.value;
-
-            const csrfToken = getCsrfToken();
-
-            if (!csrfToken) {
-                errorMessageDiv.textContent = 'CSRF token not found. Please refresh the page.';
-                console.error('CSRF token is missing!');
-                return;
+                return cookieValue;
             }
 
-            try {
-                const response = await fetch('/login/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({ username: username, password: password })
-                });
+            togglePassword.addEventListener('click', function() {
+                const type = passwordInput.getAttribute('type') === 'text' ? 'password' : 'text';
+                passwordInput.setAttribute('type', type);
+                this.classList.toggle('fa-eye');
+                this.classList.toggle('fa-eye-slash');
+            });
 
-                const data = await response.json();
+            loginForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                errorMessageDiv.textContent = '';
 
-                if (response.ok) {
-                    console.log('Login successful:', data.message);
-                    if (data.redirect) {
-                        window.location.href = data.redirect;
+                const username = loginForm.elements.username.value;
+                const password = loginForm.elements.password.value;
+
+                const csrfToken = getCsrfToken();
+
+                if (!csrfToken) {
+                    errorMessageDiv.textContent = 'CSRF token not found. Please refresh the page.';
+                    console.error('CSRF token is missing!');
+                    return;
+                }
+
+                const loaderData = showLoader();
+
+                try {
+                    const response = await fetch('/login/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: JSON.stringify({ username: username, password: password })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        console.log('Login successful:', data.message);
+                        await hideLoader(loaderData, () => {
+                            if (data.redirect) {
+                                window.location.href = data.redirect;
+                            } else {
+                                console.warn("No redirect URL provided by the backend.");
+                                window.location.reload();
+                            }
+                        });
                     } else {
-                        console.warn("No redirect URL provided by the backend.");
-                        window.location.reload();
+                        await hideLoader(loaderData);
+                        errorMessageDiv.textContent = data.error || 'Login failed. Please try again.';
+                        console.error('Login failed:', data.error);
                     }
-                } else {
-                    errorMessageDiv.textContent = data.error || 'Login failed. Please try again.';
-                    console.error('Login failed:', data.error);
+                } catch (error) {
+                    await hideLoader(loaderData);
+                    console.error('Network error or unexpected issue:', error);
+                    errorMessageDiv.textContent = 'An unexpected error occurred. Please try again later.';
                 }
-            } catch (error) {
-                console.error('Network error or unexpected issue:', error);
-                errorMessageDiv.textContent = 'An unexpected error occurred. Please try again later.';
-            }
+            });
         });
-    });
-</script>
+    </script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -8,6 +9,12 @@ from django.utils import timezone
 from datetime import date, timedelta
 import json
 import logging
+from django.views.decorators.http import require_http_methods
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from garage.models import VehicleType, ClientGarage
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -233,6 +240,7 @@ def get_purchase_orders(request):
             'id': po.id,
             'purchaseNo': po.purchase_no,
             'supplier': po.supplier.name,
+            'supplierId': str(po.supplier.id), 
             'date': po.date.strftime('%Y-%m-%d'),
             'amount': float(po.total),
             'paymentMode': po.payment_mode,
@@ -253,42 +261,59 @@ def get_purchase_orders(request):
 @login_required
 def make_supplier_payment(request):
     if request.user.is_superuser or request.user.role != 'admin':
+        logger.warning(f"Unauthorized access attempt by user {request.user.username}")
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             supplier_id = data.get('supplierId')
-            amount = float(data.get('amount'))
+            amount = Decimal(str(data.get('amount')))  # Convert to Decimal
             purchase_order_id = data.get('purchaseOrderId')
-            
-            supplier = Supplier.objects.get(pk=supplier_id, client_garage=request.user.client_garage)
+
+            if not supplier_id:
+                logger.warning("Supplier ID is missing in payment request")
+                return JsonResponse({'error': 'Supplier ID is required'}, status=400)
             if amount <= 0:
+                logger.warning(f"Invalid payment amount: {amount}")
                 return JsonResponse({'error': 'Payment amount must be positive'}, status=400)
+
+            supplier = Supplier.objects.get(pk=supplier_id, client_garage=request.user.client_garage)
             if amount > supplier.current_credit:
+                logger.warning(f"Payment amount {amount} exceeds current credit {supplier.current_credit}")
                 return JsonResponse({'error': 'Payment amount cannot exceed current credit'}, status=400)
-            
+
+            # Create payment record
             payment = SupplierPayment.objects.create(
                 client_garage=request.user.client_garage,
                 supplier=supplier,
                 purchase_order=PurchaseOrder.objects.get(pk=purchase_order_id) if purchase_order_id else None,
-                amount=amount
+                amount=amount,
+                payment_date=timezone.now().date()
             )
-            
+
+            # Update supplier's current credit
             supplier.current_credit -= amount
             supplier.save()
-            
+
+            # Update purchase order status if linked
             if purchase_order_id:
-                po = PurchaseOrder.objects.get(pk=purchase_order_id)
-                total_paid = SupplierPayment.objects.filter(purchase_order=po).aggregate(Sum('amount'))['amount__sum'] or 0
+                po = PurchaseOrder.objects.get(pk=purchase_order_id, client_garage=request.user.client_garage)
+                total_paid = SupplierPayment.objects.filter(purchase_order=po).aggregate(Sum('amount'))['amount__sum'] or Decimal('0')
                 po.status = 'paid' if total_paid >= po.total else 'partially_paid'
                 po.save()
-            
+                logger.info(f"Updated purchase order {po.purchase_no}: status={po.status}, total_paid={total_paid}")
+
+            logger.info(f"Payment of {amount} recorded for supplier {supplier.name} (ID: {supplier.id}) by user {request.user.username}")
             return JsonResponse({'message': 'Payment recorded successfully'}, status=200)
+
         except Supplier.DoesNotExist:
+            logger.warning(f"Supplier ID {supplier_id} not found for client_garage {request.user.client_garage.id}")
             return JsonResponse({'error': 'Supplier not found'}, status=404)
         except PurchaseOrder.DoesNotExist:
+            logger.warning(f"Purchase order ID {purchase_order_id} not found for client_garage {request.user.client_garage.id}")
             return JsonResponse({'error': 'Purchase order not found'}, status=404)
         except Exception as e:
+            logger.error(f"Error processing payment: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
@@ -331,7 +356,8 @@ def get_inventory(request):
             'supplier': p.supplier.name if p.supplier else '',
             'lastUpdated': p.last_movement.strftime('%Y-%m-%d'),
             'movement': p.movement_type,
-            'status': p.status
+            'status': p.status,
+            'image': p.image.url if p.image else ''
         } for p in page_obj],
         'total_pages': paginator.num_pages,
         'current_page': page
@@ -343,54 +369,67 @@ def save_inventory(request):
         return JsonResponse({'error': 'Unauthorized'}, status=403)
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            # Support both JSON and multipart/form-data
+            if request.content_type.startswith('multipart'):
+                data = request.POST
+                files = request.FILES
+            else:
+                data = json.loads(request.body)
+                files = None
             part_id = data.get('id')
             client_garage = request.user.client_garage
             client_fiscal_year = request.user.client_fiscal_year
             
-            if not data.get('name') or data.get('quantity', 0) < 0:
+            if not data.get('name') or int(data.get('quantity', 0)) < 0:
                 return JsonResponse({'error': 'Part name and valid quantity are required'}, status=400)
             
-            category = PartCategory.objects.filter(client_garage=client_garage, name=data.get('category')).first()
+            # Assign default category (first available for the client garage)
+            category = PartCategory.objects.filter(client_garage=client_garage).first()
             if not category:
-                return JsonResponse({'error': 'Invalid category'}, status=400)
+                return JsonResponse({'error': 'No part category exists. Please create a category first.'}, status=400)
             
-            supplier = Supplier.objects.filter(client_garage=client_garage, name=data.get('supplier')).first() if data.get('supplier') else None
             vehicle_company = VehicleCompany.objects.filter(client_garage=client_garage, name=data.get('vehicleCompany')).first() if data.get('vehicleCompany') else None
             vehicle_type = VehicleType.objects.filter(client_garage=client_garage, name=data.get('vehicleType')).first() if data.get('vehicleType') else None
             vehicle_model = VehicleModel.objects.filter(client_garage=client_garage, name=data.get('vehicleModel')).first() if data.get('vehicleModel') else None
             
             if part_id:
                 part = Part.objects.get(pk=part_id, client_garage=client_garage)
-                if Part.objects.filter(client_garage=client_garage, code=data['code']).exclude(pk=part_id).exists():
-                    return JsonResponse({'error': 'Part code already exists'}, status=400)
             else:
-                if Part.objects.filter(client_garage=client_garage, code=data['code']).exists():
-                    return JsonResponse({'error': 'Part code already exists'}, status=400)
                 part = Part(client_garage=client_garage, client_fiscal_year=client_fiscal_year)
             
-            part.code = data['code']
             part.name = data['name']
             part.category = category
             part.vehicle_company = vehicle_company
             part.vehicle_type = vehicle_type
             part.vehicle_model = vehicle_model
-            part.supplier = supplier
+            part.supplier = None  # Set supplier to None as per requirement
             part.purchase_price = float(data.get('purchasePrice', 0))
             part.selling_price = float(data.get('sellingPrice', 0))
             part.in_stock = int(data.get('quantity', 0))
-            part.min_stock = int(data.get('minStock', 5))
-            part.status = 'out-of-stock' if part.in_stock == 0 else 'low-stock' if part.in_stock <= part.min_stock else 'in-stock'
+            part.status = 'out-of-stock' if part.in_stock == 0 else 'in-stock'  # Simplified status without min_stock
             part.last_movement = date.today()
             part.movement_type = 'updated' if part_id else 'added'
+
+            # Handle image upload
+            if files and 'image' in files:
+                new_image = files['image']
+                # Delete old image if exists
+                if part.image and part.image.name and part.image.storage.exists(part.image.name):
+                    part.image.delete(save=False)
+                part.image = new_image
+                logger.info(f"User {request.user.username} uploaded image for Part {part.id} ({part.name})")
             part.save()
             
-            return JsonResponse({'message': 'Inventory item saved successfully'}, status=200)
+            return JsonResponse({
+                'message': 'Inventory item saved successfully',
+                'image': part.image.url if part.image else ''
+            }, status=200)
         except PartCategory.DoesNotExist:
-            return JsonResponse({'error': 'Part category not found'}, status=404)
+            return JsonResponse({'error': 'No part category exists. Please create a category first.'}, status=404)
         except Part.DoesNotExist:
             return JsonResponse({'error': 'Part not found'}, status=404)
         except Exception as e:
+            logger.error(f"Error saving inventory: {str(e)}")
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)
 
@@ -426,12 +465,6 @@ def get_vehicle_companies(request):
     companies = VehicleCompany.objects.filter(client_garage=request.user.client_garage)
     return JsonResponse([{'id': c.id, 'name': c.name} for c in companies], safe=False, status=200)
 
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
-from garage.models import VehicleType, ClientGarage
-import logging
-
-logger = logging.getLogger(__name__)
 
 @login_required
 def get_vehicle_types_a(request):
@@ -504,4 +537,108 @@ def get_vehicle_models_a(request):
         return JsonResponse({'error': 'Client garage not found'}, status=404)
     except Exception as e:
         logger.error(f"Error in get_vehicle_models for user {request.user.username}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def upload_part_image(request):
+    logger.info(f"Received upload request. POST: {dict(request.POST)}, FILES: {dict(request.FILES)}, GET: {dict(request.GET)}")
+    try:
+        part_id = request.POST.get('id') or request.GET.get('id')
+        logger.info(f"Extracted Part ID: {part_id}")
+        if not part_id:
+            logger.error("Part ID is missing")
+            return JsonResponse({'error': 'Part ID is required'}, status=400)
+        part = Part.objects.get(pk=part_id, client_garage=request.user.client_garage)
+        logger.info(f"Part found: {part.id} - {part.name}")
+        if 'image' not in request.FILES:
+            logger.error("No image file provided in request.FILES")
+            return JsonResponse({'error': 'No image file provided'}, status=400)
+        new_image = request.FILES['image']
+        logger.info(f"Image received: {new_image.name}, size: {new_image.size}")
+        if part.image and part.image.name and part.image.storage.exists(part.image.name):
+            logger.info(f"Deleting old image: {part.image.name}")
+            part.image.delete(save=False)
+        part.image = new_image
+        part.save()
+        logger.info(f"User {request.user.username} uploaded image for Part {part.id} ({part.name})")
+        return JsonResponse({
+            'message': 'Image uploaded successfully',
+            'image': part.image.url if part.image else ''
+        }, status=200)
+    except Part.DoesNotExist:
+        logger.error(f"Part with ID {part_id} not found or does not belong to client_garage {request.user.client_garage.id}")
+        return JsonResponse({'error': 'Part not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error uploading image: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def get_supplier_details(request, supplier_id):
+    if request.user.is_superuser or request.user.role != 'admin':
+        logger.warning(f"Unauthorized access attempt by user {request.user.username}")
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    try:
+        supplier = Supplier.objects.get(pk=supplier_id, client_garage=request.user.client_garage)
+        purchase_orders = PurchaseOrder.objects.filter(
+            supplier=supplier,
+            client_garage=request.user.client_garage
+        ).order_by('-date')
+        
+        total_purchases = purchase_orders.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+        total_paid = SupplierPayment.objects.filter(
+            supplier=supplier,
+            client_garage=request.user.client_garage
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        response_data = {
+            'supplier': {
+                'id': supplier.id,
+                'name': supplier.name,
+                'contact_person': supplier.contact_person or '',
+                'phone': supplier.phone,
+                'email': supplier.email or '',
+                'address': supplier.address or '',
+                'vat_number': supplier.vat_number or '',
+                'category': supplier.category,
+                'credit_limit': float(supplier.credit_limit),
+                'current_credit': float(supplier.current_credit),
+                'payment_terms': supplier.payment_terms,
+                'status': supplier.status,
+                'last_purchase': supplier.purchase_orders.order_by('-date').first().date.strftime('%Y-%m-%d') if supplier.purchase_orders.exists() else ''
+            },
+            'purchase_orders': [{
+                'id': po.id,
+                'purchase_no': po.purchase_no,
+                'date': po.date.strftime('%Y-%m-%d'),
+                'subtotal': float(po.subtotal),
+                'tax': float(po.tax),
+                'total': float(po.total),
+                'payment_mode': po.payment_mode,
+                'status': po.status,
+                'due_date': po.due_date.strftime('%Y-%m-%d') if po.due_date else '',
+                'items': [{
+                    'name': item.part.name,
+                    'code': item.part.code,
+                    'quantity': item.quantity,
+                    'rate': float(item.rate),
+                    'amount': float(item.amount),
+                    'vehicle_company': item.part.vehicle_company.name if item.part.vehicle_company else '',
+                    'vehicle_type': item.part.vehicle_type.name if item.part.vehicle_type else '',
+                    'vehicle_model': item.part.vehicle_model.name if item.part.vehicle_model else ''
+                } for item in po.items.all()]
+            } for po in purchase_orders],
+            'summary': {
+                'total_purchases': float(total_purchases),
+                'total_paid': float(total_paid),
+                'outstanding_balance': float(total_purchases - total_paid),
+                'total_orders': purchase_orders.count()
+            }
+        }
+        return JsonResponse(response_data, status=200)
+    except Supplier.DoesNotExist:
+        logger.warning(f"Supplier ID {supplier_id} not found for client_garage {request.user.client_garage.id}")
+        return JsonResponse({'error': 'Supplier not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching supplier details: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)

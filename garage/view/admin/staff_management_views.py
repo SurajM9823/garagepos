@@ -12,6 +12,8 @@ import json
 from decimal import Decimal
 import csv
 from io import StringIO
+import pandas as pd
+from django.utils import timezone
 
 @login_required
 def staff_management(request):
@@ -56,11 +58,14 @@ def get_staff_list(request):
         )
 
     staff_data = []
+    today = date.today()
     for user in staff:
         completed_today = user.service_orders.filter(
             status='completed',
-            created_date=date.today()
+            created_date=today
         ).count()
+        # Get today's attendance status
+        attendance = StaffAttendance.objects.filter(user=user, date=today).first()
         staff_data.append({
             'id': user.id,
             'name': user.username,
@@ -79,6 +84,7 @@ def get_staff_list(request):
             'base_salary': float(user.base_salary or 0.0),
             'previous_dues': float(user.previous_dues or 0.0),
             'profile_image': user.profile_image.url if user.profile_image else None,
+            'today_attendance': attendance.status if attendance else 'absent'
         })
 
     stats = {
@@ -168,7 +174,7 @@ def save_staff(request):
                     username=username,
                     email=email,
                     password=password,
-                    role='staff',  # Always create with 'staff' role
+                    role='staff',
                     client_garage=client_garage,
                     financial_year=active_financial_year,
                     client_fiscal_year=active_client_fiscal_year,
@@ -219,7 +225,7 @@ def save_payroll(request):
             amount = request.POST.get('amount')
             payment_mode = request.POST.get('payment_mode')
             notes = request.POST.get('notes')
-            incentives = request.POST.get('incentives', 0)
+            incentives = request.POST.get('incentives', '0')  # Default to 0 if not provided
 
             if not all([user_id, amount, payment_mode]):
                 return JsonResponse({'error': 'User ID, amount, and payment mode are required'}, status=400)
@@ -256,8 +262,18 @@ def get_payroll(request):
     
     try:
         user_id = request.GET.get('user_id')
+        month = request.GET.get('month')
+        year = request.GET.get('year')
+
         user = User.objects.get(pk=user_id, client_garage=request.user.client_garage)
-        payrolls = StaffPayroll.objects.filter(user=user).order_by('-payment_date')
+        query = StaffPayroll.objects.filter(user=user)
+
+        if month and year:
+            start_date = date(int(year), int(month), 1)
+            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+            query = query.filter(payment_date__range=[start_date, end_date])
+        
+        payrolls = query.order_by('-payment_date')
         payroll_data = [{
             'id': p.id,
             'date': p.payment_date.strftime('%Y-%m-%d'),
@@ -266,6 +282,7 @@ def get_payroll(request):
             'notes': p.notes,
             'incentives': float(p.incentives),
         } for p in payrolls]
+
         return JsonResponse({
             'base_salary': float(user.base_salary or 0.0),
             'previous_dues': float(user.previous_dues or 0.0),
@@ -286,15 +303,21 @@ def generate_payroll_statement(request):
     if request.method == 'POST':
         try:
             user_ids = json.loads(request.POST.get('user_ids', '[]'))
-            month = int(request.POST.get('month'))
-            year = int(request.POST.get('year'))
+            start_date_str = request.POST.get('start_date')
+            end_date_str = request.POST.get('end_date')
             client_garage = request.user.client_garage
 
-            start_date = date(year, month, 1)
-            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+            # If no dates provided, use current month
+            if not start_date_str or not end_date_str:
+                today = date.today()
+                start_date = date(today.year, today.month, 1)
+                end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+            else:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
 
             response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = f'attachment; filename="payroll_statement_{month}_{year}.csv"'
+            response['Content-Disposition'] = f'attachment; filename="payroll_statement_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"'
 
             writer = csv.writer(response)
             writer.writerow(['Staff Name', 'Email', 'Role', 'Base Salary', 'Incentives', 'Payments', 'Dues', 'Attendance Days'])
@@ -325,6 +348,106 @@ def generate_payroll_statement(request):
                 ])
 
             return response
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=400)
+
+@login_required
+def get_payroll_excel_data(request):
+    if request.user.is_superuser or request.user.role != 'admin':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    try:
+        user_ids = json.loads(request.GET.get('user_ids', '[]'))
+        start_date_str = request.GET.get('start_date')
+        end_date_str = request.GET.get('end_date')
+        client_garage = request.user.client_garage
+
+        if not start_date_str or not end_date_str:
+            today = date.today()
+            start_date = date(today.year, today.month, 1)
+            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+        else:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+
+        payroll_data = []
+        for user_id in user_ids:
+            user = User.objects.get(pk=user_id, client_garage=client_garage)
+            payrolls = StaffPayroll.objects.filter(
+                user=user,
+                payment_date__range=[start_date, end_date]
+            )
+            attendance = StaffAttendance.objects.filter(
+                user=user,
+                date__range=[start_date, end_date],
+                status='present'
+            ).count()
+            total_incentives = payrolls.aggregate(total_incentives=Sum('incentives'))['total_incentives'] or 0
+            total_payments = payrolls.aggregate(total_amount=Sum('amount'))['total_amount'] or 0
+
+            payroll_data.append({
+                'Staff Name': user.username,
+                'Email': user.email,
+                'Role': user.role,
+                'Base Salary': float(user.base_salary or 0),
+                'Incentives': float(total_incentives),
+                'Payments': float(total_payments),
+                'Dues': float(user.previous_dues or 0),
+                'Attendance Days': attendance
+            })
+
+        return JsonResponse({'payroll_data': payroll_data}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def toggle_attendance(request):
+    if request.user.is_superuser or request.user.role != 'admin':
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    
+    if request.method == 'POST':
+        try:
+            user_id = request.POST.get('user_id')
+            user = User.objects.get(pk=user_id, client_garage=request.user.client_garage)
+            today = date.today()
+            
+            # Default times
+            default_check_in = datetime.combine(today, datetime.strptime('09:00', '%H:%M').time())
+            default_check_out = datetime.combine(today, datetime.strptime('17:00', '%H:%M').time())
+
+            attendance, created = StaffAttendance.objects.get_or_create(
+                user=user,
+                date=today,
+                defaults={
+                    'client_garage': request.user.client_garage,
+                    'status': 'present',
+                    'check_in': timezone.make_aware(default_check_in),
+                    'check_out': timezone.make_aware(default_check_out),
+                    'notes': 'Auto-marked attendance'
+                }
+            )
+
+            if not created:
+                # Toggle status
+                new_status = 'present' if attendance.status == 'absent' else 'absent'
+                attendance.status = new_status
+                if new_status == 'present':
+                    attendance.check_in = timezone.make_aware(default_check_in)
+                    attendance.check_out = timezone.make_aware(default_check_out)
+                    attendance.notes = 'Auto-marked attendance'
+                else:
+                    attendance.check_in = None
+                    attendance.check_out = None
+                    attendance.notes = 'Marked absent'
+                attendance.save()
+
+            return JsonResponse({
+                'message': 'Attendance updated successfully',
+                'status': attendance.status
+            }, status=200)
+        except User.DoesNotExist:
+            return JsonResponse({'error': 'Staff not found'}, status=404)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=400)

@@ -1,9 +1,9 @@
 from django.urls import path
 from . import views
 from garage.view.admin.add_vehicle_view import add_vehicle, assign_mechanic, get_service_orders, add_vehicle_and_order, get_vehicle_models,search_vehicle,search_customer, staff_list, update_service_order, get_service_order
-from garage.view.admin.pos_billing_view import pos_billing
-from garage.view.admin.inventory_management import inventory_management, get_vehicle_models_a, get_vehicle_types_a, get_vehicle_companies, search_items, save_inventory, get_inventory, make_supplier_payment,create_purchase_order,save_supplier, get_purchase_orders, get_suppliers, get_tax_settings
-from garage.view.admin.staff_management_views import staff_management, get_attendance, generate_payroll_statement, get_payroll, save_payroll, delete_staff, save_staff, get_staff_list, save_attendance
+from garage.view.admin.pos_billing_view import pos_billing, get_tax_settings, get_daily_summary, generate_bill_pdf
+from garage.view.admin.inventory_management import inventory_management, get_vehicle_models_a, get_vehicle_types_a, get_vehicle_companies, search_items, save_inventory, get_inventory, make_supplier_payment,create_purchase_order,save_supplier, get_purchase_orders, get_suppliers, get_tax_settings, upload_part_image, get_supplier_details
+from garage.view.admin.staff_management_views import staff_management, get_attendance, generate_payroll_statement, get_payroll, save_payroll, delete_staff, save_staff, get_staff_list, save_attendance, toggle_attendance, get_payroll_excel_data
 from garage.view.admin.admin_report_views import admin_report_views
 from garage.view.admin.admin_setting import admin_setting_views, save_general_settings, save_fiscal_year,delete_fiscal_year, save_service_type,  save_user, delete_role, save_role, delete_part_category, save_part_category, delete_service_type,save_service_type,delete_fiscal_year,save_fiscal_year,save_general_settings, save_tax_settings, save_other_settings
 from garage.view.admin.upload import admin_upload, download_template,upload_models,upload_vehicle_types,upload_companies, export_models,export_vehicle_types, export_companies, delete_models,delete_vehicle_types, delete_companies,save_models,save_vehicle_types,save_companies, get_model,get_vehicle_type,get_company,get_company,get_models, get_vehicle_types, get_companies
@@ -106,6 +106,7 @@ urlpatterns = [
     path('pos/save_customer/', save_customer, name='save_customer'),
     path('pos/save_bill/', save_bill, name='save_bill'),
     path('pos/generate_bill/',generate_bill, name='generate_bill'),
+    path('pos/generate_bill_pdf/', generate_bill_pdf, name='generate_bill_pdf'), 
 
     path('admin/get-staff-list/', get_staff_list, name='get_staff_list'),
     path('admin/save-staff/', save_staff, name='save_staff'),
@@ -115,7 +116,12 @@ urlpatterns = [
     path('admin/generate-payroll-statement/', generate_payroll_statement, name='generate_payroll_statement'),
     path('admin/save-attendance/', save_attendance, name='save_attendance'),
     path('admin/get-attendance/', get_attendance, name='get_attendance'),
+    path('admin/toggle-attendance/',toggle_attendance, name='toggle_attendance'),
+    path('admin/get-payroll-excel-data/', get_payroll_excel_data, name='get_payroll_excel_data'),
 
-   
+    path('admin/upload-part-image/', upload_part_image, name='upload_part_image'),
+    path('admin/get_tax_settings/', get_tax_settings, name='get_tax_settings'),
+    path('admin/get_daily_summary/', get_daily_summary, name='get_daily_summary'),
+    path('admin/get-supplier-details/<int:supplier_id>/', get_supplier_details, name='get_supplier_details'),
     
 ]

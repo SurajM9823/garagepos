@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'garagepos',
+        'NAME': 'garage',
         'USER': 'root',
         'PASSWORD': 'root',  # Replace with your MariaDB root password
         'HOST': 'localhost',

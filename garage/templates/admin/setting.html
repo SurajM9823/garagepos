@@ -117,17 +117,18 @@
 <script>
     // Initial data from Django context (unchanged except for adding a safeguard)
     const initialData = {
-        general: {
-            garageName: '{{ client_garage.name|default:"" }}',
-            address: '{{ client_garage.address|default:"" }}',
-            phone: '{{ client_garage.contact|default:"" }}',
-            email: '{{ client_garage.email|default:"" }}',
-            currency: '{{ client_garage.currency|default:"NPR" }}',
-            lowStockThreshold: {{ client_garage.low_stock_threshold|default:5 }},
-            notifications: {{ client_garage.notifications_enabled|yesno:"true,false" }},
-            whatsapp: {{ client_garage.whatsapp_enabled|yesno:"true,false" }},
-            logo: '{{ client_garage.logo.url|default:"" }}'
-        },
+    general: {
+        garageName: '{{ client_garage.name|default:"" }}',
+        address: '{{ client_garage.address|default:"" }}',
+        phone: '{{ client_garage.contact|default:"" }}',
+        email: '{{ client_garage.email|default:"" }}',
+        currency: '{{ client_garage.currency|default:"NPR" }}',
+        lowStockThreshold: {{ client_garage.low_stock_threshold|default:5 }},
+        notifications: {{ client_garage.notifications_enabled|yesno:"true,false" }},
+        whatsapp: {{ client_garage.whatsapp_enabled|yesno:"true,false" }},
+        logo: '{% if client_garage.logo %}{{ client_garage.logo.url }}{% else %}{% endif %}'
+    },
+
         financialYears: [
             {% for fy in fiscal_years %}
             {

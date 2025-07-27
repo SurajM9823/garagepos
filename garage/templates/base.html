@@ -9,20 +9,20 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div class="flex h-screen">
         {% if user.is_authenticated %}
         <!-- Mobile sidebar overlay -->
-        <div id="sidebarOverlay" class="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden hidden" onclick="toggleSidebar()"></div>
+        <div id="sidebarOverlay" class="fixed inset-0 z-20 bg-black bg-opacity-40 lg:hidden hidden" onclick="toggleSidebar()"></div>
 
         <!-- Sidebar (Fixed) -->
-        <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0">
-            <div class="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 bg-gradient-to-b from-white to-blue-100 shadow-md transform -translate-x-full transition-transform duration-300 ease-in-out lg:translate-x-0">
+            <div class="flex items-center justify-between h-16 px-6 border-b border-blue-200 bg-white/80">
                 <div class="flex items-center space-x-2">
-                    <i class="fas fa-car w-8 h-8 text-blue-600"></i>
-                    <span class="text-xl font-bold text-gray-900">Garage POS</span>
+                    <i class="fas fa-car w-8 h-8 text-indigo-600"></i>
+                    <span class="text-xl font-bold text-gray-800">Garage POS</span>
                 </div>
-                <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-700">
+                <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 hover:text-indigo-700">
                     <i class="fas fa-times w-6 h-6"></i>
                 </button>
             </div>
@@ -30,101 +30,101 @@
                 <ul>
                     {% if user.is_superuser %}
                         <li>
-                            <a href="{% url 'superuser_dashboard' %}" class="{% if request.path == '/superuser/dashboard/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3"></i>
+                            <a href="{% url 'superuser_dashboard' %}" class="{% if request.path == '/superuser/dashboard/' %}bg-indigo-100 text-indigo-700 border-r-2 border-indigo-500{% else %}text-gray-700 hover:bg-indigo-50 hover:text-indigo-800{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3 text-indigo-600"></i>
                                 Dashboard
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'add_company_user' %}" class="{% if request.path == '/superuser/add-user/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-user-plus w-5 h-5 mr-3"></i>
+                            <a href="{% url 'add_company_user' %}" class="{% if request.path == '/superuser/add-user/' %}bg-indigo-100 text-indigo-700 border-r-2 border-indigo-500{% else %}text-gray-700 hover:bg-indigo-50 hover:text-indigo-800{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-user-plus w-5 h-5 mr-3 text-indigo-600"></i>
                                 Add User
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-file-alt w-5 h-5 mr-3"></i>
+                            <a href="#" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-file-alt w-5 h-5 mr-3 text-indigo-600"></i>
                                 Reports
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'superuser_setting' %}" class="{% if request.path == '/superuser/settings/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-cog w-5 h-5 mr-3"></i>
+                            <a href="{% url 'superuser_setting' %}" class="{% if request.path == '/superuser/settings/' %}bg-indigo-100 text-indigo-700 border-r-2 border-indigo-500{% else %}text-gray-700 hover:bg-indigo-50 hover:text-indigo-800{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cog w-5 h-5 mr-3 text-indigo-600"></i>
                                 Settings
                             </a>
                         </li>
                     {% elif user.role == 'admin' %}
                         <li>
-                            <a href="{% url 'admin_dashboard' %}" class="{% if request.path == '/admin/dashboard/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3"></i>
+                            <a href="{% url 'admin_dashboard' %}" class="{% if request.path == '/admin/dashboard/' %}bg-indigo-100 text-indigo-700 border-r-2 border-indigo-500{% else %}text-gray-700 hover:bg-indigo-50 hover:text-indigo-800{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3 text-indigo-600"></i>
                                 Dashboard
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'add_vehicle' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-car-side w-5 h-5 mr-3"></i>
+                            <a href="{% url 'add_vehicle' %}" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-car-side w-5 h-5 mr-3 text-indigo-600"></i>
                                 Add Vehicle
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'pos_billing' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-cash-register w-5 h-5 mr-3"></i>
+                            <a href="{% url 'pos_billing' %}" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cash-register w-5 h-5 mr-3 text-indigo-600"></i>
                                 POS
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'inventory_management' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-boxes w-5 h-5 mr-3"></i>
+                            <a href="{% url 'inventory_management' %}" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-boxes w-5 h-5 mr-3 text-indigo-600"></i>
                                 Inventory
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'staff_management' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-users w-5 h-5 mr-3"></i>
+                            <a href="{% url 'staff_management' %}" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-users w-5 h-5 mr-3 text-indigo-600"></i>
                                 Staff
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'admin_report' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-file-alt w-5 h-5 mr-3"></i>
+                            <a href="{% url 'admin_report' %}" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-file-alt w-5 h-5 mr-3 text-indigo-600"></i>
                                 Reports
                             </a>
                         </li>
                         <li>
-                            <a href="{%url 'admin_setting' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-cog w-5 h-5 mr-3"></i>
+                            <a href="{%url 'admin_setting' %}" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cog w-5 h-5 mr-3 text-indigo-600"></i>
                                 Settings
                             </a>
                         </li>
                         <li>
-                            <a href="{%url 'admin_upload' %}" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-cog w-5 h-5 mr-3"></i>
+                            <a href="{%url 'admin_upload' %}" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-cog w-5 h-5 mr-3 text-indigo-600"></i>
                                 Uploads
                             </a>
                         </li>
                     {% else %}
                         <li>
-                            <a href="{% url 'staff_dashboard' %}" class="{% if request.path == '/staff/dashboard/' %}bg-blue-50 text-blue-700 border-r-2 border-blue-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3"></i>
+                            <a href="{% url 'staff_dashboard' %}" class="{% if request.path == '/staff/dashboard/' %}bg-indigo-100 text-indigo-700 border-r-2 border-indigo-500{% else %}text-gray-700 hover:bg-indigo-50 hover:text-indigo-800{% endif %} w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-tachometer-alt w-5 h-5 mr-3 text-indigo-600"></i>
                                 Dashboard
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-shopping-cart w-5 h-5 mr-3"></i>
+                            <a href="#" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-shopping-cart w-5 h-5 mr-3 text-indigo-600"></i>
                                 Manage Orders
                             </a>
                         </li>
                         <li>
-                            <a href="#" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
-                                <i class="fas fa-file-alt w-5 h-5 mr-3"></i>
+                            <a href="#" class="text-gray-700 hover:bg-indigo-50 hover:text-indigo-800 w-full flex items-center px-6 py-3 text-sm font-medium transition-colors duration-200">
+                                <i class="fas fa-file-alt w-5 h-5 mr-3 text-indigo-600"></i>
                                 Reports
                             </a>
                         </li>
                     {% endif %}
                     <li>
-                        <button onclick="logout()" class="w-full flex items-center px-6 py-3 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200">
-                            <i class="fas fa-lock w-5 h-5 mr-3"></i>
+                        <button onclick="logout()" class="w-full flex items-center px-6 py-3 text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-600 transition-colors duration-200">
+                            <i class="fas fa-lock w-5 h-5 mr-3 text-red-500"></i>
                             Logout
                         </button>
                     </li>
@@ -134,38 +134,36 @@
 
         <div class="flex-1 flex flex-col">
             <!-- Header (Fixed) -->
-            <header class="fixed top-0 left-0 right-0 lg:left-64 z-20 bg-white shadow-sm border-b border-gray-200 h-16">
+            <header class="fixed top-0 left-0 right-0 lg:left-64 z-20 bg-gradient-to-r from-indigo-100 to-blue-100 shadow-sm border-b border-indigo-200 h-16">
                 <div class="flex items-center justify-between px-4 sm:px-6 h-full">
-                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-700">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-gray-600 hover:text-indigo-700">
                         <i class="fas fa-bars w-6 h-6"></i>
                     </button>
                     <div class="flex items-center space-x-4">
-                        <div class="hidden sm:block">
-                            <h1 class="text-2xl font-semibold text-gray-900">
-                                {% block page_title %}
-                                {% if request.path == '/superuser/dashboard/' %}Superuser Dashboard
-                                {% elif request.path == '/admin/dashboard/' %}Admin Dashboard
-                                {% elif request.path == '/staff/dashboard/' %}Staff Dashboard
-                                {% elif request.path == '/superuser/add-user/' %}Add User
-                                {% else %}Dashboard
+                        <div class="hidden sm:flex items-center space-x-2">
+                            {% if user.is_superuser %}
+                                <h1 class="text-2xl font-semibold text-gray-800">Superuser Dashboard</h1>
+                            {% else %}
+                                {% if user.client_garage and user.client_garage.logo %}
+                                    <img src="{{ user.client_garage.logo.url }}" alt="{{ user.client_garage.name }} Logo" class="h-8 w-8 object-contain">
                                 {% endif %}
-                                {% endblock %}
-                            </h1>
+                                <h1 class="text-2xl font-semibold text-gray-800">{{ user.client_garage.name|default:"No Garage Assigned" }}</h1>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
                         <!-- Notification Icon (Dummy) -->
                         <div class="relative">
-                            <button id="notificationBtn" class="text-gray-500 hover:text-gray-700">
+                            <button id="notificationBtn" class="text-gray-600 hover:text-indigo-700">
                                 <i class="fas fa-bell w-6 h-6"></i>
-                                <span id="notificationCount" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full hidden">0</span>
+                                <span id="notificationCount" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full hidden">0</span>
                             </button>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm font-medium text-gray-900">{{ user.username }}</p>
-                            <p class="text-xs text-gray-500">{{ user.company.name|default:"No Company" }}</p>
+                            <p class="text-sm font-medium text-gray-800">{{ user.username }}</p>
+                            <p class="text-xs text-gray-600">{{ user.company.name|default:"No Company" }}</p>
                         </div>
-                        <div class="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                        <div class="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
                             <span class="text-white text-sm font-medium">{{ user.username|first|upper }}</span>
                         </div>
                     </div>
@@ -173,7 +171,7 @@
             </header>
 
             <!-- Scrollable Content Area -->
-            <main class="flex-1 p-6 mt-16 lg:ml-64 overflow-y-auto">
+            <main class="flex-1 p-6 mt-16 lg:ml-64 overflow-y-auto bg-white/80 rounded-lg shadow-sm">
                 {% block content %}
                 {% endblock %}
             </main>
@@ -255,10 +253,10 @@
             const navLinks = document.querySelectorAll('#sidebar a');
             navLinks.forEach(link => {
                 if (link.getAttribute('href') === window.location.pathname) {
-                    link.classList.add('bg-blue-50', 'text-blue-700', 'border-r-2', 'border-blue-600');
+                    link.classList.add('bg-indigo-100', 'text-indigo-700', 'border-r-2', 'border-indigo-500');
                 } else {
-                    link.classList.remove('bg-blue-50', 'text-blue-700', 'border-r-2', 'border-blue-600');
-                    link.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
+                    link.classList.remove('bg-indigo-100', 'text-indigo-700', 'border-r-2', 'border-indigo-500');
+                    link.classList.add('text-gray-700', 'hover:bg-indigo-50', 'hover:text-indigo-800');
                 }
             });
         });

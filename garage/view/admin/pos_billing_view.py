@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
-from garage.models import ClientGarage, Customer, ServiceOrderItem, Vehicle, Bill, BillItem, ServiceOrder, Part, PartCategory, ServiceType
+from garage.models import ClientGarage, Customer, ServiceOrderItem, TaxSetting, Vehicle, Bill, BillItem, ServiceOrder, Part, PartCategory, ServiceType
 import json
 import logging
 from django.db.models import Q
@@ -23,21 +23,14 @@ def get_items(request):
         client_garage = ClientGarage.objects.get(user=request.user)
         search_query = request.GET.get('q', '')
         
-        # Fetch parts
         parts = Part.objects.filter(client_garage=client_garage)
         if search_query:
-            parts = parts.filter(
-                Q(name__icontains=search_query) | Q(code__icontains=search_query)
-            )
+            parts = parts.filter(Q(name__icontains=search_query) | Q(code__icontains=search_query))
         
-        # Fetch services
         services = ServiceType.objects.filter(client_garage=client_garage)
         if search_query:
-            services = services.filter(
-                Q(name__icontains=search_query)
-            )
+            services = services.filter(Q(name__icontains=search_query))
         
-        # Combine results
         results = [
             {
                 'id': part.id,
@@ -46,7 +39,7 @@ def get_items(request):
                 'price': float(part.selling_price),
                 'category': part.category.name if part.category else 'Uncategorized',
                 'inStock': part.in_stock,
-                'image': 'fa-cogs',
+                'image': part.image.url if part.image else None,  # Include image URL or None
                 'isService': False
             }
             for part in parts
@@ -57,8 +50,8 @@ def get_items(request):
                 'name': service.name,
                 'price': float(service.base_price),
                 'category': 'Service',
-                'inStock': 9999,  # Services don't have stock limits
-                'image': 'fa-tools',
+                'inStock': 9999,
+                'image': None,  # Services have no image
                 'isService': True
             }
             for service in services
@@ -72,7 +65,7 @@ def get_items(request):
     except Exception as e:
         logger.error(f"Error in get_items for user {request.user.username}: {str(e)}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
+    
 # Other views remain unchanged
 @login_required
 def pos_billing(request):
@@ -210,7 +203,7 @@ def get_item(request):
                 'id': f"service-{service.id}",
                 'name': service.name,
                 'price': float(service.base_price),
-                'image': 'fa-tools',
+                'image': None,  # Services have no image
                 'isService': True
             }
         else:
@@ -219,7 +212,7 @@ def get_item(request):
                 'id': part.id,
                 'name': part.name,
                 'price': float(part.selling_price),
-                'image': 'fa-cogs',
+                'image': part.image.url if part.image else None,  # Include image URL or None
                 'isService': False
             }
         logger.info(f"Fetched item {result['name']} (ID: {item_id}) for user {request.user.username}")
@@ -230,7 +223,7 @@ def get_item(request):
     except Exception as e:
         logger.error(f"Error in get_item for user {request.user.username}: {str(e)}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
+    
 @login_required
 def get_bills(request):
     try:
@@ -378,13 +371,20 @@ def save_bill(request):
         vehicle = Vehicle.objects.filter(id=vehicle_id, client_garage=client_garage).first() if vehicle_id else None
         service_order = ServiceOrder.objects.filter(order_no=order_no, client_garage=client_garage).first() if order_no else None
 
-        bill = Bill.objects.get(id=bill_id, client_garage=client_garage) if bill_id else Bill(
-            client_garage=client_garage,
-            bill_no=f'B{timezone.now().strftime("%Y%m%d%H%M%S")}',
-            customer=customer,
-            vehicle=vehicle,
-            service_order=service_order
-        )
+        # Create or update bill
+        if bill_id:
+            bill = Bill.objects.get(id=bill_id, client_garage=client_garage)
+        else:
+            # Generate bill number (e.g., B01, B02) to match generate_bill format
+            last_bill = Bill.objects.filter(client_garage=client_garage).order_by('-id').first()
+            bill_no = f"B{str(last_bill.id + 1 if last_bill else 1).zfill(2)}"
+            bill = Bill(
+                client_garage=client_garage,
+                bill_no=bill_no,
+                customer=customer,
+                vehicle=vehicle,
+                service_order=service_order
+            )
 
         # Fetch service charges from ServiceOrderItem if service_order exists
         if service_order:
@@ -453,30 +453,55 @@ def save_bill(request):
         logger.error(f"Error saving bill for user {request.user.username}: {str(e)}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
     
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
+from django.http import JsonResponse
+from django.utils import timezone
+from garage.models import ClientGarage, Customer, Vehicle, ServiceOrder, ServiceOrderItem, ServiceType, Part, Bill, BillItem, TaxSetting
+import json
+import logging
+import uuid
+
+logger = logging.getLogger(__name__)
+
 @login_required
 @require_POST
 def generate_bill(request):
     try:
         client_garage = ClientGarage.objects.get(user=request.user)
         data = json.loads(request.body)
+        
+        # Extract and validate input data
         bill_id = data.get('bill_id')
         customer_id = data.get('customer_id')
         vehicle_id = data.get('vehicle_id')
         items = data.get('items', [])
-        total = data.get('total')
+        total = data.get('total', 0.0)
         status = data.get('status', 'Completed')
         discount = data.get('discount', {'type': 'percentage', 'value': 0})
         credit = data.get('credit', 0)
         payment_mode = data.get('payment_mode', 'cash')
         order_no = data.get('order_no')
 
+        # Validate required fields
+        if not items or not isinstance(total, (int, float)) or total < 0:
+            logger.error(f"Invalid input: items={items}, total={total}")
+            return JsonResponse({'status': 'error', 'message': 'Items and valid total are required'}, status=400)
+
+        # Fetch related objects with validation
         customer = Customer.objects.filter(id=customer_id, client_garage=client_garage).first() if customer_id else None
         vehicle = Vehicle.objects.filter(id=vehicle_id, client_garage=client_garage).first() if vehicle_id else None
         service_order = ServiceOrder.objects.filter(order_no=order_no, client_garage=client_garage).first() if order_no else None
 
+        # Generate bill number (e.g., B01, B02)
+        last_bill = Bill.objects.filter(client_garage=client_garage).order_by('-id').first()
+        bill_no = f"B{str(last_bill.id + 1 if last_bill else 1).zfill(2)}"  # e.g., B01, B02
+
+        # Create or update bill
         bill = Bill.objects.get(id=bill_id, client_garage=client_garage) if bill_id else Bill(
             client_garage=client_garage,
-            bill_no=f'B{timezone.now().strftime("%Y%m%d%H%M%S")}',
+            bill_no=bill_no,
             customer=customer,
             vehicle=vehicle,
             service_order=service_order
@@ -486,7 +511,6 @@ def generate_bill(request):
         if service_order:
             service_order_items = ServiceOrderItem.objects.filter(service_order=service_order)
             for service_item in service_order_items:
-                # Avoid duplicating items if already in the items list
                 if not any(item.get('id') == f"service-{service_item.service_type.id}" for item in items):
                     items.append({
                         'id': f"service-{service_item.service_type.id}",
@@ -496,34 +520,44 @@ def generate_bill(request):
                         'isService': True
                     })
 
-        # Calculate tax
-        subtotal = sum(item['price'] * item['quantity'] for item in items)
-        discount_amount = (subtotal * discount['value'] / 100) if discount['type'] == 'percentage' else discount['value']
-        tax = (subtotal - discount_amount) * 0.13
+        # Calculate subtotal, discount, and tax
+        subtotal = sum(float(item['price']) * int(item['quantity']) for item in items)
+        discount_amount = (subtotal * float(discount['value']) / 100) if discount['type'] == 'percentage' else float(discount['value'])
+        tax_setting = TaxSetting.objects.filter(client_garage=client_garage).first()
+        tax_rate = float(tax_setting.tax_rate) if tax_setting else 13.0
+        tax = (subtotal - discount_amount) * (tax_rate / 100)
+
+        # Validate total matches calculated total
+        expected_total = subtotal - discount_amount + tax
+        if abs(float(total) - expected_total) > 0.01:
+            logger.warning(f"Total mismatch: provided={total}, calculated={expected_total}")
+            total = expected_total  # Use calculated total for consistency
 
         # Update bill fields
         bill.total = total
         bill.discount_type = discount['type']
-        bill.discount_value = discount['value']
+        bill.discount_value = float(discount['value'])
         bill.tax = tax
-        bill.credit_amount = credit
+        bill.credit_amount = float(credit)
         bill.payment_mode = payment_mode
         bill.status = status
         bill.save()
 
-        # NEW: Update ServiceOrder status to "completed" if bill is "Completed"
+        # Update ServiceOrder status and clear mechanics if completed
         if service_order and status == 'Completed':
             service_order.status = 'completed'
             service_order.updated_at = timezone.now()
+            service_order.mechanics.clear()  # Release mechanics
             service_order.save()
-            # NEW: Release mechanics by deleting their assignments
-            service_order.mechanics.clear()  # Removes all mechanic assignments from garage_serviceorder_mechanics
 
         # Clear existing bill items
         bill.bill_items.all().delete()
 
         # Save bill items
         for item in items:
+            if not item.get('name') or not isinstance(item.get('price'), (int, float)) or not isinstance(item.get('quantity'), int):
+                logger.warning(f"Skipping invalid item: {item}")
+                continue
             part = None
             service_type = None
             if item.get('isService', False):
@@ -531,24 +565,30 @@ def generate_bill(request):
                 if service_id:
                     service_type = ServiceType.objects.filter(id=service_id, client_garage=client_garage).first()
                 if not service_type:
-                    # Fallback: Create a temporary ServiceType if not found
                     service_type = ServiceType.objects.create(
                         client_garage=client_garage,
                         name=item['name'],
                         category='Temporary',
-                        base_price=item['price']
+                        base_price=float(item['price'])
                     )
             else:
                 part = Part.objects.filter(id=item['id'], client_garage=client_garage).first() if item.get('id') else None
                 if not part:
-                    continue  # Skip invalid parts
+                    logger.warning(f"Part not found for item ID {item.get('id')}")
+                    continue
+                # Update part stock
+                part.in_stock -= item['quantity']
+                if part.in_stock < 0:
+                    logger.error(f"Insufficient stock for part {part.name} (ID: {part.id})")
+                    return JsonResponse({'status': 'error', 'message': f'Insufficient stock for part {part.name}'}, status=400)
+                part.save()
             BillItem.objects.create(
                 bill=bill,
                 item=part,
                 service_type=service_type,
                 name=item['name'],
-                price=item['price'],
-                quantity=item['quantity']
+                price=float(item['price']),
+                quantity=int(item['quantity'])
             )
 
         # Update JSONField for compatibility
@@ -564,6 +604,7 @@ def generate_bill(request):
         ]
         bill.save()
 
+        logger.info(f"Generated bill {bill.bill_no} for user {request.user.username}")
         return JsonResponse({
             'status': 'success',
             'bill': {
@@ -585,10 +626,15 @@ def generate_bill(request):
                 'date': bill.created_at.strftime('%Y-%m-%d')
             }
         })
+    except ClientGarage.DoesNotExist:
+        logger.error(f"No ClientGarage found for user {request.user.username}")
+        return JsonResponse({'status': 'error', 'message': 'Client garage not found'}, status=404)
+    except json.JSONDecodeError:
+        logger.error(f"Invalid JSON in generate_bill request for user {request.user.username}")
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
     except Exception as e:
         logger.error(f"Error generating bill for user {request.user.username}: {str(e)}")
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    
+        return JsonResponse({'status': 'error', 'message': f'Failed to generate bill: {str(e)}'}, status=500)
 
 @login_required
 def get_bill(request):
@@ -671,85 +717,252 @@ def delete_bill(request):
     except Exception as e:
         logger.error(f"Error in delete_bill for user {request.user.username}: {str(e)}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
 @login_required
 def generate_bill_pdf(request):
     try:
         bill_id = request.GET.get('bill_id')
+        if not bill_id or not bill_id.isdigit():
+            return JsonResponse({'status': 'error', 'message': 'Invalid bill ID'}, status=400)
+        
         client_garage = ClientGarage.objects.get(user=request.user)
         bill = get_object_or_404(Bill, id=bill_id, client_garage=client_garage)
         
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch, leftMargin=0.5*inch, rightMargin=0.5*inch)
         elements = []
+        
+        # --- Define custom styles for a clean, attractive look ---
         styles = getSampleStyleSheet()
         
-        title_style = ParagraphStyle(name='Title', fontSize=16, leading=20, alignment=1, spaceAfter=12)
-        normal_style = ParagraphStyle(name='Normal', fontSize=10, leading=12)
-        bold_style = ParagraphStyle(name='Bold', fontSize=10, leading=12, fontName='Helvetica-Bold')
+        # Custom Colors
+        header_bg_color = colors.HexColor('#F0F0F0')
+        table_header_bg = colors.HexColor('#212529')
+        table_header_text = colors.white
         
-        elements.append(Paragraph(client_garage.name, title_style))
-        elements.append(Paragraph(client_garage.address or 'Kathmandu, Nepal', normal_style))
+        # FIX: Ensure all custom styles are defined here before use
+        header_style = ParagraphStyle(name='HeaderStyle', fontSize=18, fontName='Helvetica-Bold', alignment=1, spaceAfter=6, textColor=colors.HexColor('#333333'))
+        subheader_style = ParagraphStyle(name='SubheaderStyle', fontSize=10, fontName='Helvetica', alignment=1, spaceAfter=4, textColor=colors.HexColor('#666666'))
+        details_label_style = ParagraphStyle(name='DetailsLabelStyle', fontSize=9, fontName='Helvetica-Bold', leading=11)
+        details_value_style = ParagraphStyle(name='DetailsValueStyle', fontSize=9, fontName='Helvetica', leading=11)
+        table_header_style = ParagraphStyle(name='TableHeaderStyle', fontSize=9, fontName='Helvetica-Bold', leading=11, textColor=table_header_text, alignment=1)
+        footer_style = ParagraphStyle(name='FooterStyle', fontSize=8, fontName='Helvetica', alignment=1, spaceBefore=12, textColor=colors.HexColor('#666666'))
+        
+        # Use a consistent style for normal text
+        normal_style = ParagraphStyle(name='Normal', fontSize=9, leading=11, fontName='Helvetica')
+
+        # --- Document Layout ---
+
+        # Header: Garage details with a clean, centered look
+        elements.append(Paragraph(client_garage.name, header_style))
+        elements.append(Paragraph(client_garage.address or 'Kathmandu, Nepal', subheader_style))
         if client_garage.contact:
-            elements.append(Paragraph(f"Contact: {client_garage.contact}", normal_style))
+            elements.append(Paragraph(f"Contact: {client_garage.contact}", subheader_style))
         if client_garage.email:
-            elements.append(Paragraph(f"Email: {client_garage.email}", normal_style))
+            elements.append(Paragraph(f"Email: {client_garage.email}", subheader_style))
         elements.append(Spacer(1, 0.2 * inch))
+
+        # Bill and Customer Details (two columns for better organization)
+        details_data = [
+            [
+                Paragraph(f"<b>Bill No:</b> {bill.bill_no}", normal_style), 
+                Paragraph(f"<b>Date:</b> {bill.created_at.strftime('%Y-%m-%d')}", normal_style)
+            ],
+            [
+                Paragraph(f"<b>Customer:</b> {bill.customer.name if bill.customer else 'Anonymous'}", normal_style), 
+                Paragraph(f"<b>Phone:</b> {bill.customer.phone if bill.customer and bill.customer.phone else ''}", normal_style)
+            ],
+            [
+                Paragraph(f"<b>Vehicle:</b> {bill.vehicle.vehicle_number if bill.vehicle and bill.vehicle.vehicle_number else ''}", normal_style),
+                Paragraph(f"<b>Order No:</b> {bill.service_order.order_no if bill.service_order else ''}", normal_style)
+            ]
+        ]
         
-        elements.append(Paragraph(f"Bill No: {bill.bill_no}", normal_style))
-        elements.append(Paragraph(f"Date: {bill.created_at.strftime('%Y-%m-%d')}", normal_style))
+        details_table = Table(details_data, colWidths=[3.25*inch, 3.25*inch])
+        details_table.setStyle(TableStyle([
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('BACKGROUND', (0, 0), (-1, -1), header_bg_color),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC'))
+        ]))
+        elements.append(details_table)
         elements.append(Spacer(1, 0.2 * inch))
+
+        # Items Table (with enhanced styling)
+        data = [
+            [
+                Paragraph("<b>Item Description</b>", table_header_style), 
+                Paragraph("<b>Qty</b>", table_header_style), 
+                Paragraph("<b>Price</b>", table_header_style), 
+                Paragraph("<b>Total</b>", table_header_style)
+            ]
+        ]
         
-        elements.append(Paragraph("Customer Details", bold_style))
-        elements.append(Paragraph(bill.customer.name if bill.customer else 'Anonymous', normal_style))
-        if bill.customer and bill.customer.phone:
-            elements.append(Paragraph(bill.customer.phone, normal_style))
-        if bill.vehicle and bill.vehicle.vehicle_number:
-            elements.append(Paragraph(bill.vehicle.vehicle_number, normal_style))
-        elements.append(Spacer(1, 0.2 * inch))
-        
-        data = [['Item', 'Qty', 'Price', 'Total']]
         for bi in bill.bill_items.all():
             data.append([
-                bi.name,
-                str(bi.quantity),
-                f"NPR {bi.price:.2f}",
-                f"NPR {(bi.price * bi.quantity):.2f}"
+                Paragraph(bi.name, normal_style),
+                Paragraph(str(bi.quantity), normal_style),
+                Paragraph(f"NPR {bi.price:.2f}", normal_style),
+                Paragraph(f"NPR {(bi.price * bi.quantity):.2f}", normal_style)
             ])
-        table = Table(data)
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            
+        items_table = Table(data, colWidths=[3.5*inch, 0.8*inch, 1.2*inch, 1.2*inch])
+        items_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), table_header_bg),
+            ('TEXTCOLOR', (0, 0), (-1, 0), table_header_text),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 10),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#CCCCCC')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
         ]))
-        elements.append(table)
+        elements.append(items_table)
         elements.append(Spacer(1, 0.2 * inch))
-        
+
+        # Summary Section (cleaner, two-column layout)
         subtotal = sum(bi.price * bi.quantity for bi in bill.bill_items.all())
-        elements.append(Paragraph(f"Subtotal: NPR {subtotal:.2f}", normal_style))
-        elements.append(Paragraph(f"Discount ({bill.discount_type}): NPR {bill.discount_value:.2f}", normal_style))
-        elements.append(Paragraph(f"VAT (13%): NPR {bill.tax:.2f}", normal_style))
-        if bill.credit_amount > 0:
-            elements.append(Paragraph(f"Credit: NPR {bill.credit_amount:.2f}", normal_style))
-        elements.append(Paragraph(f"Total: NPR {bill.total:.2f}", bold_style))
-        elements.append(Paragraph(f"Payment Mode: {bill.payment_mode.upper()}", normal_style))
+        discount_amount = bill.discount_value if bill.discount_type == 'amount' else (subtotal * bill.discount_value / 100)
+        
+        summary_data = [
+            [Paragraph("<b>Subtotal:</b>", details_label_style), Paragraph(f"NPR {subtotal:.2f}", details_value_style)],
+            [Paragraph(f"<b>Discount ({'amount' if bill.discount_type == 'amount' else str(bill.discount_value) + '%'}):</b>", details_label_style), Paragraph(f"NPR {discount_amount:.2f}", details_value_style)],
+            [Paragraph("<b>VAT (13%):</b>", details_label_style), Paragraph(f"NPR {bill.tax:.2f}", details_value_style)],
+            [Paragraph("<b>Credit:</b>", details_label_style), Paragraph(f"NPR {bill.credit_amount:.2f}", details_value_style) if bill.credit_amount > 0 else ''],
+            [Paragraph("<b>Total:</b>", ParagraphStyle(name='TotalStyle', fontSize=11, fontName='Helvetica-Bold', leading=14, textColor=colors.HexColor('#000000'))), Paragraph(f"NPR {bill.total:.2f}", ParagraphStyle(name='TotalStyle', fontSize=11, fontName='Helvetica-Bold', leading=14, textColor=colors.HexColor('#000000')))],
+            [Paragraph("<b>Payment Mode:</b>", details_label_style), Paragraph(bill.payment_mode.upper(), details_value_style)]
+        ]
+        
+        summary_table = Table(summary_data, colWidths=[3.25*inch, 3.25*inch])
+        summary_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            ('LINEBELOW', (0, -2), (-1, -2), 1, colors.black),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        ]))
+        elements.append(summary_table)
+
+        # Footer
+        elements.append(Spacer(1, 0.5 * inch))
+        elements.append(Paragraph("Thank you for your business!", footer_style))
+        elements.append(Paragraph("This is a computer-generated invoice and does not require a signature.", footer_style))
         
         doc.build(elements)
+        
         pdf = buffer.getvalue()
         buffer.close()
         
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="bill_{bill.bill_no}.pdf"'
+        response['Content-Disposition'] = f'inline; filename="bill_{bill.bill_no}.pdf"'
         response.write(pdf)
         return response
+    
+    except ClientGarage.DoesNotExist:
+        logger.error(f"No ClientGarage found for user {request.user.username}")
+        return JsonResponse({'status': 'error', 'message': 'Client garage not found'}, status=404)
+    except Bill.DoesNotExist:
+        logger.error(f"Bill {bill_id} not found for user {request.user.username}")
+        return JsonResponse({'status': 'error', 'message': 'Bill not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error in generate_bill_pdf for user {request.user.username}: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': f'Failed to generate PDF: {str(e)}'}, status=500)
+    
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
+
+@login_required
+def get_tax_settings(request):
+    try:
+        client_garage = ClientGarage.objects.get(user=request.user)
+        tax_setting = TaxSetting.objects.filter(client_garage=client_garage).first()
+        if not tax_setting:
+            tax_setting = TaxSetting.objects.create(
+                client_garage=client_garage,
+                tax_rate=13.00,
+                include_in_bill=True
+            )
+        return JsonResponse({
+            'tax_rate': float(tax_setting.tax_rate),
+            'include_in_bill': tax_setting.include_in_bill
+        })
     except ClientGarage.DoesNotExist:
         logger.error(f"No ClientGarage found for user {request.user.username}")
         return JsonResponse({'status': 'error', 'message': 'Client garage not found'}, status=404)
     except Exception as e:
-        logger.error(f"Error in generate_bill_pdf for user {request.user.username}: {str(e)}")
+        logger.error(f"Error getting tax settings for user {request.user.username}: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
+
+@login_required
+def get_tax_settings(request):
+    try:
+        client_garage = ClientGarage.objects.get(user=request.user)
+        tax_setting = TaxSetting.objects.filter(client_garage=client_garage).first()
+        if not tax_setting:
+            tax_setting = TaxSetting.objects.create(
+                client_garage=client_garage,
+                tax_rate=13.00,
+                include_in_bill=True
+            )
+        return JsonResponse({
+            'tax_rate': float(tax_setting.tax_rate),
+            'include_in_bill': tax_setting.include_in_bill
+        })
+    except ClientGarage.DoesNotExist:
+        logger.error(f"No ClientGarage found for user {request.user.username}")
+        return JsonResponse({'status': 'error', 'message': 'Client garage not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting tax settings for user {request.user.username}: {str(e)}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Sum
+from django.db.models.functions import TruncDate
+from django.http import JsonResponse
+import logging
+
+logger = logging.getLogger(__name__)
+
+@login_required
+def get_daily_summary(request):
+    try:
+        client_garage = ClientGarage.objects.get(user=request.user)
+        summary = Bill.objects.filter(
+            client_garage=client_garage,
+            status__in=['Completed', 'Credit']
+        ).annotate(
+            date=TruncDate('created_at')
+        ).values('date').annotate(
+            total_bills=Count('id'),
+            total_amount=Sum('total')  # ✅ Fixed quote
+        ).order_by('-date')[:5]  # Last 5 days
+
+        return JsonResponse({
+            'summary': [
+                {
+                    'date': item['date'].strftime('%Y-%m-%d'),
+                    'total_bills': item['total_bills'],
+                    'total_amount': float(item['total_amount']) if item['total_amount'] else 0.0
+                }
+                for item in summary
+            ]
+        })
+    except ClientGarage.DoesNotExist:
+        logger.error(f"No ClientGarage found for user {request.user.username}")
+        return JsonResponse({'status': 'error', 'message': 'Client garage not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error getting daily summary for user {request.user.username}: {str(e)}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)

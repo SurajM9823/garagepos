@@ -11,8 +11,12 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError('The Email field must be set')
         email = self.normalize_email(email)
-        if role not in ['staff', 'manager', 'cashier', 'mechanic']:
+
+        # Allow 'superuser' only if is_superuser is True
+        is_superuser = extra_fields.get('is_superuser', False)
+        if not is_superuser and role not in ['staff', 'manager', 'cashier', 'mechanic', 'admin']:
             raise ValueError('Role must be staff, manager, cashier, or mechanic for non-superuser accounts')
+
         user = self.model(
             username=username,
             email=email,
@@ -121,11 +125,30 @@ class ClientFiscalYear(models.Model):
         return f"{self.client_garage.name} - {self.name}"
 
     def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)  # Save first to ensure PK is assigned
+
         if self.status == 'active':
+            # Now safe to use self in queries
             ClientFiscalYear.objects.filter(client_garage=self.client_garage).exclude(pk=self.pk).update(status='inactive')
             User.objects.filter(client_garage=self.client_garage).update(client_fiscal_year=self)
-        super().save(*args, **kwargs)
 
+
+
+from django.db import models, IntegrityError
+import logging
+
+logger = logging.getLogger(__name__)
+
+from django.db import models, IntegrityError
+import logging
+
+logger = logging.getLogger(__name__)
+
+from django.db import models, IntegrityError
+import logging
+
+logger = logging.getLogger(__name__)
 
 class FinancialYear(models.Model):
     STATUS_CHOICES = (
@@ -144,11 +167,29 @@ class FinancialYear(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        if self.status == 'active':
-            FinancialYear.objects.exclude(pk=self.pk).update(status='inactive')
-            User.objects.update(financial_year=self)
+        # Save the instance first to assign a primary key
         super().save(*args, **kwargs)
+        
+        if self.status == 'active':
+            try:
+                # Deactivate other FinancialYear instances
+                FinancialYear.objects.exclude(pk=self.pk).update(status='inactive')
+                logger.info(f"Set all other FinancialYear instances to inactive for {self.name}")
+            except Exception as e:
+                logger.error(f"Error updating other FinancialYear statuses: {str(e)}")
+                raise
 
+            try:
+                # Update users with a valid client_garage
+                User.objects.filter(client_garage__isnull=False).update(financial_year=self)
+                logger.info(f"Updated relevant User objects to reference FinancialYear {self.name}")
+            except IntegrityError as e:
+                logger.error(f"IntegrityError updating User financial_year: {str(e)}")
+                raise ValueError(f"Cannot update User financial_year: {str(e)}")
+            except Exception as e:
+                logger.error(f"Unexpected error updating User financial_year: {str(e)}")
+                raise
+                    
 
 class SoftwareInfo(models.Model):
     name = models.CharField(max_length=100)
@@ -339,6 +380,7 @@ class Part(models.Model):
     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
     in_stock = models.PositiveIntegerField(default=0)
     min_stock = models.PositiveIntegerField(default=5)
+    image = models.ImageField(upload_to='part_images/', blank=True, null=True)
     status = models.CharField(max_length=20, choices=[
         ('in-stock', 'In Stock'),
         ('low-stock', 'Low Stock'),
